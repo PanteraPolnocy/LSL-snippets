@@ -136,7 +136,7 @@ default
 
 			list l = llParseString2List(data, ["-"], []);
 			integer Y = (integer)llList2String(l, 0);
-			integer M = (integer)llList2String(l, 1);    
+			integer M = (integer)llList2String(l, 1);
 			integer D = (integer)llList2String(l, 2);
 			if (M == 1 || M == 2)
 			{
@@ -152,7 +152,7 @@ default
 
 			l = llParseString2List(llGetDate(), ["-"], []);
 			Y = (integer)llList2String(l, 0);
-			M = (integer)llList2String(l, 1);    
+			M = (integer)llList2String(l, 1);
 			D = (integer)llList2String(l, 2);
 			if (M == 1 || M == 2)
 			{

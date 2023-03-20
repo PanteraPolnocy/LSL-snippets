@@ -3,16 +3,16 @@
 default
 {
 
-    on_rez(integer sp)
-    {
-        llResetScript();
-    }
+	on_rez(integer sp)
+	{
+		llResetScript();
+	}
 
-    state_entry()
-    {
-        llSetText("", <1,1,1>, 0);
-        llSleep(3);
-        llRemoveInventory(llGetScriptName());
-    }
+	state_entry()
+	{
+		llSetText("", <1,1,1>, 0);
+		llSleep(3);
+		llRemoveInventory(llGetScriptName());
+	}
 
 }

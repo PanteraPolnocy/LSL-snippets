@@ -13,47 +13,47 @@ string gFolderPg = "swapitems/pg";
 
 getRating()
 {
-    gQuery = llRequestSimulatorData(llGetRegionName(), DATA_SIM_RATING);
+	gQuery = llRequestSimulatorData(llGetRegionName(), DATA_SIM_RATING);
 }
 
 default
 {
 
-    on_rez(integer Setting)
-    {
-        llResetScript();
-    }
+	on_rez(integer Setting)
+	{
+		llResetScript();
+	}
 
-    state_entry()
-    {
-        getRating();
-    }
+	state_entry()
+	{
+		getRating();
+	}
 
-    changed(integer change)
-    {
-        if (change & (CHANGED_OWNER | CHANGED_REGION | CHANGED_TELEPORT))
-        {
-            getRating();
-        }
-    }
+	changed(integer change)
+	{
+		if (change & (CHANGED_OWNER | CHANGED_REGION | CHANGED_TELEPORT))
+		{
+			getRating();
+		}
+	}
 
-    dataserver(key query_id, string data)
-    {
-        if (query_id == gQuery)
-        {
-            if (data == "ADULT")
-            {
-                llOwnerSay("@attachallover:" + gFolderAdult + "=force,detachall:" + gFolderModerate + "=force,detachall:" + gFolderPg + "=force");
-            }
-            else if (data == "MATURE")
-            {
-                llOwnerSay("@detachall:" + gFolderAdult + "=force,attachallover:" + gFolderModerate + "=force,detachall:" + gFolderPg + "=force");
-            }
-            else // PG or UNKNOWN
-            {
-                llOwnerSay("@detachall:" + gFolderAdult + "=force,detachall:" + gFolderModerate + "=force,attachallover:" + gFolderPg + "=force");
-            }
-        }
-    }
-    
+	dataserver(key query_id, string data)
+	{
+		if (query_id == gQuery)
+		{
+			if (data == "ADULT")
+			{
+				llOwnerSay("@attachallover:" + gFolderAdult + "=force,detachall:" + gFolderModerate + "=force,detachall:" + gFolderPg + "=force");
+			}
+			else if (data == "MATURE")
+			{
+				llOwnerSay("@detachall:" + gFolderAdult + "=force,attachallover:" + gFolderModerate + "=force,detachall:" + gFolderPg + "=force");
+			}
+			else // PG or UNKNOWN
+			{
+				llOwnerSay("@detachall:" + gFolderAdult + "=force,detachall:" + gFolderModerate + "=force,attachallover:" + gFolderPg + "=force");
+			}
+		}
+	}
+
 }

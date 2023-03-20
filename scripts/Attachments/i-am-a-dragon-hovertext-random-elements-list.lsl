@@ -7,20 +7,20 @@ list animals = ["bat", "vampire", "werewolf", "cat", "demon", "giraffe", "dolphi
 default
 {
 
-    on_rez(integer sp)
-    {
-        llResetScript();
-    }
+	on_rez(integer sp)
+	{
+		llResetScript();
+	}
 
-    state_entry()
-    {
-        llSetTimerEvent(1);
-        llSetMemoryLimit(llGetUsedMemory() + 2048);
-    }
+	state_entry()
+	{
+		llSetTimerEvent(1);
+		llSetMemoryLimit(llGetUsedMemory() + 2048);
+	}
 
-    timer()
-    {
-        llSetText("I AM A DRAGON\nNot a " + llList2String(llListRandomize(animals, 0), 0), <llFrand(1), llFrand(1), llFrand(1)>, 0.75);
-    }
+	timer()
+	{
+		llSetText("I AM A DRAGON\nNot a " + llList2String(llListRandomize(animals, 0), 0), <llFrand(1), llFrand(1), llFrand(1)>, 0.75);
+	}
 
 }
