@@ -11,7 +11,7 @@ integer gNotecardLine;
 
 list gAvatars = [
     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", // Avatar key #1
-    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", // Avatar key #2
+    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" // Avatar key #2
 ];
 
 // Filled dynamically by script
