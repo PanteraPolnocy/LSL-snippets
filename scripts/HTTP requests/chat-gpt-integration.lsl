@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.6
+// Version 2.6.1
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -287,6 +287,7 @@ default
 		}
 		else if (gCurrentModelName == "DALL-E")
 		{
+			promptAdditions = ["user", (string)id, "prompt", message];
 			if (gAnswerIn == "Nearby chat")
 			{
 				llSay(0, "Query received, please be patient...");
