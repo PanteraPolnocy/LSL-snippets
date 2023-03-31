@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.6.1
+// Version 2.6.2
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -313,13 +313,13 @@ default
 		if (gHTTPRequestId == request_id)
 		{
 
-			// Davinci
-			string result = llJsonGetValue(body, ["choices", 0, "text"]);
-
 			// GPT-4, GPT 3.5 Turbo
+			string result = llJsonGetValue(body, ["choices", 0, "message", "content"]);
+
+			// Davinci
 			if (result == JSON_INVALID || result == JSON_NULL)
 			{
-				result = llJsonGetValue(body, ["choices", 0, "message", "content"]);
+				result = llJsonGetValue(body, ["choices", 0, "text"]);
 			}
 
 			// DALL-E
