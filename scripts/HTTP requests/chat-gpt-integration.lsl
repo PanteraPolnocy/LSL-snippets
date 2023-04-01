@@ -14,7 +14,6 @@ string gChatGptApiKey = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 // ----------------------------------
 
 // Defaults, do NOT change them here - use dialog menu instead!
-integer gScriptReady;
 string gListenMode = "Owner";
 string gAnswerIn = "Nearby chat";
 integer gHovertext = TRUE;
@@ -60,6 +59,7 @@ list gOpenAiModels = [
 
 // Set in runtime
 integer gEnabled;
+integer gScriptReady;
 integer gListenHandle;
 integer gDialogChannel;
 integer gDialogHandle;
