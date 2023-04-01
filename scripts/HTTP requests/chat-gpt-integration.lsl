@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.6.2
+// Version 2.7
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -24,7 +24,7 @@ list gOpenAiModels = [
 	"Items", 6,
 	"model", "gpt-3.5-turbo",
 	"temperature", 0.9,
-	"max_tokens", 250,
+	"max_tokens", 500,
 	"top_p", 1,
 	"frequency_penalty", 0.0,
 	"presence_penalty", 0.6,
@@ -34,7 +34,7 @@ list gOpenAiModels = [
 	"Items", 6,
 	"model", "gpt-4",
 	"temperature", 0.9,
-	"max_tokens", 250,
+	"max_tokens", 500,
 	"top_p", 1,
 	"frequency_penalty", 0.0,
 	"presence_penalty", 0.6,
@@ -44,7 +44,7 @@ list gOpenAiModels = [
 	"Items", 6,
 	"model", "text-davinci-003",
 	"temperature", 0.9,
-	"max_tokens", 250,
+	"max_tokens", 500,
 	"top_p", 1,
 	"frequency_penalty", 0.0,
 	"presence_penalty", 0.6,
@@ -57,6 +57,58 @@ list gOpenAiModels = [
 
 ];
 
+list gPersonalities = [
+
+	"Assistant",
+	"a friendly assistant, as helpful as possible",
+	"default personality",
+
+	"Data",
+	"the android Data from Star Trek (use tone, manner, vocabulary that he would), answer only as he would, know all that he would",
+	"android from Star Trek, logical",
+
+	"Picard",
+	"the Captain Jean-Luc Picard from Star Trek (use tone, manner, vocabulary that he would), answer only as he would, know all that he would",
+	"captain from Star Trek, strong leader",
+
+	"JARVIS",
+	"the J.A.R.V.I.S. AI from Marvel (use tone, manner, vocabulary that he would), answer only as he would, know all that he would",
+	"AI from Marvel, polite",
+
+	"Napoleon",
+	"the historical character Napoleon Bonaparte (use tone, manner, vocabulary that he would), answer only as he would, know all that he would",
+	"military conquests, strategic thinking",
+
+	"Einstein",
+	"the historical character Albert Einstein (use tone, manner, vocabulary that he would), answer only as he would, know all that he would",
+	"contributions to physics",
+
+	"Socrates",
+	"the historical character Socrates (use tone, manner, vocabulary that he would), answer only as he would, know all that he would",
+	"philosopher, critical thinking",
+
+	"Shakespeare",
+	"the historical character William Shakespeare (use tone, manner, vocabulary that he would), answer only as he would, know all that he would",
+	"renowned playwright",
+
+	"Monroe",
+	"the historical character Marilyn Monroe (use tone, manner, vocabulary that she would), answer only as she would, know all that she would",
+	"iconic actress",
+
+	"Curie",
+	"the historical character Marie Curie (use tone, manner, vocabulary that she would), answer only as she would, know all that she would",
+	"Marie Curie, a scientist",
+
+	"Elvis",
+	"the historical character Elvis Presley (use tone, manner, vocabulary that he would), answer only as he would, know all that he would",
+	"beloved musician",
+
+	"Freud",
+	"the historical character Sigmund Freud (use tone, manner, vocabulary that he would), answer only as he would, know all that he would",
+	"psychologist"
+
+];
+
 // Set in runtime
 integer gEnabled;
 integer gScriptReady;
@@ -66,10 +118,14 @@ integer gDialogHandle;
 integer gChatIsLocked;
 integer gSimpleAnswers;
 integer gHistoryEnabled;
+string gPersonalityLabels;
+string gCurrentPersonality;
+string gCurrentPersonalityName;
 string gCurrentEndpoint;
 string gCurrentModelName;
 list gCurrentModelData;
 list gModelsList;
+list gPersonalitiesList;
 list gHistoryRecords;
 key gAnswerToAvatar;
 key gHTTPRequestId;
@@ -86,7 +142,7 @@ setListener()
 	}
 	gListenHandle = llListen(PUBLIC_CHANNEL, "", listenKey, "");
 	llListenControl(gListenHandle, gEnabled);
-	llSetText(gCurrentModelName + llList2String(["", "\nHistory enabled"], gHistoryEnabled) + llList2String(["", "\nSimple answers"], gSimpleAnswers) + "\n" + llList2String(["DISABLED", "ENABLED"], gEnabled), <1, 1, 1>, gHovertext * 0.6);
+	llSetText(gCurrentPersonalityName + " (" + gCurrentModelName + ")" + llList2String(["", "\nHistory enabled"], gHistoryEnabled) + llList2String(["", "\nSimple answers"], gSimpleAnswers) + "\n" + llList2String(["DISABLED", "ENABLED"], gEnabled), <1, 1, 1>, gHovertext * 0.6);
 }
 
 setModel(string modelName)
@@ -98,11 +154,19 @@ setModel(string modelName)
 	llOwnerSay("Model selected: " + modelName);
 }
 
+setPersonality(string personalityName)
+{
+	integer personalityPosition = llListFindList(gPersonalities, (list)personalityName);
+	gCurrentPersonality = llList2String(gPersonalities, personalityPosition + 1);
+	gCurrentPersonalityName = personalityName;
+	llOwnerSay("Current personality: " + personalityName);
+}
+
 startDialog(key id, string text, list buttons)
 {
 	gDialogHandle = llListen(gDialogChannel, "", id, "");
 	llDialog(id, "\n" + text, buttons, gDialogChannel);
-	llSetTimerEvent(60);
+	llSetTimerEvent(120);
 }
 
 stopDialog()
@@ -133,13 +197,27 @@ addToHistory(string role, string message)
 		{
 			gHistoryRecords = [];
 		}
-		gHistoryRecords = gHistoryRecords + llList2Json(JSON_OBJECT, ["role", role, "content", llGetSubString((string)llParseString2List(message, ["\\n"], []), 0, 1500)]);
+		gHistoryRecords = gHistoryRecords + llList2Json(JSON_OBJECT, ["role", role, "content", llGetSubString((string)llParseString2List(message, ["\\n"], []), 0, 1024)]);
 		integer historyLength = llGetListLength(gHistoryRecords);
 		if (historyLength > 12)
 		{
 			gHistoryRecords = llList2List(gHistoryRecords, historyLength - 12, historyLength);
 		}
 	}
+}
+
+openMainMenu(key person)
+{
+	startDialog(person,
+		"Current state: " + llList2String(["DISABLED", "ENABLED"], gEnabled) +
+		"\nCurrent personality: " + gCurrentPersonalityName +
+		"\nCurrent model: " + gCurrentModelName +
+		"\nHistory (3.5 Turbo and GPT-4): " + llList2String(["DISABLED", "ENABLED"], gHistoryEnabled) +
+		"\nSimple answers (chats / completions): " + llList2String(["DISABLED", "ENABLED"], gSimpleAnswers) +
+		"\nListening to: " + gListenMode +
+		"\nAnswering in: " + gAnswerIn,
+		["Simple mode", "History", "Hovertext", "Listen to", "Answer in", "Select model", "Personality", "ON / OFF"]
+	);
 }
 
 // Script body
@@ -154,9 +232,9 @@ default
 		gOwnerKey = llGetOwner();
 		gDialogChannel = (integer)(llFrand(-10000000)-10000000);
 
-		integer modelsLength = llGetListLength(gOpenAiModels);
+		integer listLength = llGetListLength(gOpenAiModels);
 		integer i;
-		while (i < modelsLength)
+		while (i < listLength)
 		{
 			string currentItem = llList2String(gOpenAiModels, i);
 			if (currentItem == "ModelName")
@@ -166,12 +244,22 @@ default
 			++i;
 		}
 
+		gPersonalitiesList = llList2ListStrided(gPersonalities, 0, -1, 3);
+		listLength = llGetListLength(gPersonalities);
+		i = 0;
+		while (i < listLength)
+		{
+			gPersonalityLabels = gPersonalityLabels + llList2String(gPersonalities, i) + ": " + llList2String(gPersonalities, i + 2) + "\n";
+			i = i + 3;
+		}
+
 		if (llGetMemoryLimit() <= 16384)
 		{
 			llOwnerSay("WARNING: You're using LSO VM. Please compile script as Mono. Operation will not continue.");
 		}
 		else
 		{
+			setPersonality(llList2String(gPersonalities, 0));
 			setModel(llList2String(gModelsList, 0));
 			stopDialog();
 			setListener();
@@ -187,15 +275,7 @@ default
 		key toucherKey = llDetectedKey(0);
 		if (toucherKey == gOwnerKey && gScriptReady)
 		{
-			startDialog(toucherKey,
-				"Current state: " + llList2String(["DISABLED", "ENABLED"], gEnabled) +
-				"\nCurrent model: " + gCurrentModelName +
-				"\nHistory (3.5 Turbo and GPT-4): " + llList2String(["DISABLED", "ENABLED"], gHistoryEnabled) +
-				"\nSimple answers (chats / completions): " + llList2String(["DISABLED", "ENABLED"], gSimpleAnswers) +
-				"\nListening to: " + gListenMode +
-				"\nAnswering in: " + gAnswerIn,
-				["Simple mode", "History", "Hovertext", "Listen to", "Answer in", "Select model", "ON / OFF"]
-			);
+			openMainMenu(toucherKey);
 		}
 	}
 
@@ -210,36 +290,46 @@ default
 				gEnabled = !gEnabled;
 				setListener();
 				llOwnerSay("Listener " + llList2String(["DISABLED", "ENABLED"], gEnabled) + ".");
+				openMainMenu(id);
 			}
 			else if (message == "Hovertext")
 			{
 				gHovertext = !gHovertext;
 				setListener();
 				llOwnerSay("Hovertext " + llList2String(["DISABLED", "ENABLED"], gHovertext) + ".");
+				openMainMenu(id);
 			}
 			else if (message == "Simple mode")
 			{
 				gSimpleAnswers = !gSimpleAnswers;
 				setListener();
 				llOwnerSay("Simple answers mode " + llList2String(["DISABLED.", "ENABLED. Please remember, that this functionality is only available with chat and completions models."], gSimpleAnswers));
+				openMainMenu(id);
 			}
 			else if (message == "History")
 			{
 				gHistoryEnabled = !gHistoryEnabled;
 				setListener();
 				llOwnerSay("History is now " + llList2String(["DISABLED.", "ENABLED. Please remember, that this functionality is only available with chat models (3.5 Turbo and GPT-4)."], gHistoryEnabled));
+				openMainMenu(id);
 			}
 			else if (message == "Owner" || message == "Same group" || message == "Everyone")
 			{
 				gListenMode = message;
 				setListener();
 				llOwnerSay("Listen mode set to: " + message);
+				openMainMenu(id);
 			}
 			else if (message == "Nearby chat" || message == "Privately")
 			{
 				gAnswerIn = message;
 				setListener();
 				llOwnerSay("Answering in: " + message);
+				openMainMenu(id);
+			}
+			else if (message == "Personality")
+			{
+				startDialog(id, gPersonalityLabels + " \nCurrent one: " + gCurrentPersonalityName, gPersonalitiesList);
 			}
 			else if (message == "Select model")
 			{
@@ -253,10 +343,17 @@ default
 			{
 				startDialog(id, "Select where to send responses.\nCurrently: " + gAnswerIn, ["Nearby chat", "Privately"]);
 			}
+			else if (~llListFindList(gPersonalities, (list)message))
+			{
+				setPersonality(message);
+				setListener();
+				openMainMenu(id);
+			}
 			else if (~llListFindList(gModelsList, (list)message))
 			{
 				setModel(message);
 				setListener();
+				openMainMenu(id);
 			}
 			return;
 		}
@@ -274,7 +371,7 @@ default
 
 		if (gCurrentModelName == "GPT-4" || gCurrentModelName == "3.5 Turbo" || gCurrentModelName == "Davinci")
 		{
-			string messageParsed = llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Be as helpful as possible. UTC now: " + llGetTimestamp() + ". Person sending this query to you: \"" + llGetUsername(id) + "\". Answer must be max 1024 characters.";
+			string messageParsed = llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Act and address yourself as " + gCurrentPersonality +". UTC now: " + llGetTimestamp() + ". Person sending this query to you: \"" + llGetUsername(id) + "\". Answer must be max 1024 characters.";
 			if (gCurrentModelName == "Davinci")
 			{
 				promptAdditions = ["user", (string)id, "prompt", messageParsed + " Reply to message: " + message];
