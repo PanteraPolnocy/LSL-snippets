@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.7
+// Version 2.7.1
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -343,7 +343,7 @@ default
 			{
 				startDialog(id, "Select where to send responses.\nCurrently: " + gAnswerIn, ["Nearby chat", "Privately"]);
 			}
-			else if (~llListFindList(gPersonalities, (list)message))
+			else if (~llListFindList(gPersonalitiesList, (list)message))
 			{
 				setPersonality(message);
 				setListener();
