@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.8
+// Version 2.8.1
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -218,7 +218,7 @@ listBlocks()
 {
 	list blocks = llLinksetDataFindKeys("^gptblock:", 0, 0);
 	integer listLength = llGetListLength(blocks);
-	llOwnerSay("Blocklist items: " + (string)listLength);
+	llOwnerSay("Blacklist items: " + (string)listLength);
 	integer i;
 	while (i < listLength)
 	{
@@ -321,7 +321,7 @@ default
 					}
 					else
 					{
-						llOwnerSay("The removal request has been sent to the blocklist storage.");
+						llOwnerSay("The removal request has been sent to the blacklist storage.");
 						llLinksetDataDelete("gptblock:" + message);
 					}
 				}
@@ -396,7 +396,7 @@ default
 					label = "remove from";
 				}
 				gDialogHandle = llListen(gDialogChannel, "", id, "");
-				llTextBox(id, "\nPlease specify one single avatar or object UUID you'd like to " + label + " the blocklist storage.", gDialogChannel);
+				llTextBox(id, "\nPlease specify one single avatar or object UUID you'd like to " + label + " the blacklist storage.", gDialogChannel);
 				llSetTimerEvent(60);
 			}
 			else if (~llListFindList(gPersonalitiesList, (list)message))
