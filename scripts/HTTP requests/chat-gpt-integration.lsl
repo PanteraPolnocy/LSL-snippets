@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.7.2
+// Version 2.8
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -115,6 +115,7 @@ integer gScriptReady;
 integer gListenHandle;
 integer gDialogChannel;
 integer gDialogHandle;
+integer gManagingBlocks;
 integer gChatIsLocked;
 integer gSimpleAnswers;
 integer gHistoryEnabled;
@@ -166,13 +167,20 @@ startDialog(key id, string text, list buttons)
 {
 	gDialogHandle = llListen(gDialogChannel, "", id, "");
 	llDialog(id, "\n" + text, buttons, gDialogChannel);
-	llSetTimerEvent(120);
+	llSetTimerEvent(90);
 }
 
 stopDialog()
 {
 	llSetTimerEvent(0);
 	llListenRemove(gDialogHandle);
+}
+
+refreshState(key id, string message)
+{
+	setListener();
+	llOwnerSay(message);
+	openMainMenu(id);
 }
 
 setChatLock(integer enable)
@@ -206,17 +214,32 @@ addToHistory(string role, string message)
 	}
 }
 
+listBlocks()
+{
+	list blocks = llLinksetDataFindKeys("^gptblock:", 0, 0);
+	integer listLength = llGetListLength(blocks);
+	llOwnerSay("Blocklist items: " + (string)listLength);
+	integer i;
+	while (i < listLength)
+	{
+		string record = llGetSubString(llList2String(blocks, i), 9, -1);
+		llOwnerSay("- secondlife:///app/agent/" + record + "/about" + " - " + record);
+		++i;
+	}
+}
+
 openMainMenu(key person)
 {
+	gManagingBlocks = 0;
 	startDialog(person,
 		"Current state: " + llList2String(["DISABLED", "ENABLED"], gEnabled) +
 		"\nCurrent personality: " + gCurrentPersonalityName +
 		"\nCurrent model: " + gCurrentModelName +
-		"\nHistory (3.5 Turbo and GPT-4): " + llList2String(["DISABLED", "ENABLED"], gHistoryEnabled) +
+		"\nHistory (3.5 Turbo / GPT-4): " + llList2String(["DISABLED", "ENABLED"], gHistoryEnabled) +
 		"\nSimple answers (chats / completions): " + llList2String(["DISABLED", "ENABLED"], gSimpleAnswers) +
 		"\nListening to: " + gListenMode +
 		"\nAnswering in: " + gAnswerIn,
-		["Simple mode", "History", "Hovertext", "Listen to", "Answer in", "Select model", "Personality", "ON / OFF"]
+		["Simple mode", "History", "Hovertext", "Listen to", "Answer in", "Select model", "ON / OFF", "Personality", "Blacklist"]
 	);
 }
 
@@ -253,9 +276,10 @@ default
 			i = i + 3;
 		}
 
-		if (llGetMemoryLimit() <= 16384)
+		integer memoryLimit = llGetMemoryLimit();
+		if (memoryLimit <= 16384)
 		{
-			llOwnerSay("WARNING: You're using LSO VM. Please compile script as Mono. Operation will not continue.");
+			llOwnerSay("FATAL ERROR: You are currently using the LSO VM. Please compile the script using Mono.");
 		}
 		else
 		{
@@ -263,8 +287,9 @@ default
 			setModel(llList2String(gModelsList, 0));
 			stopDialog();
 			setListener();
+			listBlocks();
 			setChatLock(FALSE);
-			llOwnerSay("Ready. Touch me to set options or enable / disable.");
+			llOwnerSay("Ready. Touch me to adjust options or enable/disable. Memory usage: " + (string)(llGetUsedMemory() / 1024) + " KB out of " + (string)(memoryLimit / 1024) + " KB available.");
 			gScriptReady = TRUE;
 		}
 
@@ -284,48 +309,57 @@ default
 
 		if (channel == gDialogChannel)
 		{
-			stopDialog();
-			if (message == "ON / OFF")
+			if (gManagingBlocks)
+			{
+				message = llStringTrim(message, STRING_TRIM);
+				if ((key)message)
+				{
+					if (gManagingBlocks == 1)
+					{
+						llOwnerSay("The addition request has been sent to the storage");
+						llLinksetDataWrite("gptblock:" + message, "1");
+					}
+					else
+					{
+						llOwnerSay("The removal request has been sent to the blocklist storage.");
+						llLinksetDataDelete("gptblock:" + message);
+					}
+				}
+				else
+				{
+					llOwnerSay("The UUID '" + message + "' appears to be invalid.");
+				}
+				openMainMenu(id);
+			}
+			else if (message == "ON / OFF")
 			{
 				gEnabled = !gEnabled;
-				setListener();
-				llOwnerSay("Listener " + llList2String(["DISABLED", "ENABLED"], gEnabled) + ".");
-				openMainMenu(id);
+				refreshState(id, "Listener " + llList2String(["DISABLED", "ENABLED"], gEnabled) + ".");
 			}
 			else if (message == "Hovertext")
 			{
 				gHovertext = !gHovertext;
-				setListener();
-				llOwnerSay("Hovertext " + llList2String(["DISABLED", "ENABLED"], gHovertext) + ".");
-				openMainMenu(id);
+				refreshState(id, "Hovertext " + llList2String(["DISABLED", "ENABLED"], gHovertext) + ".");
 			}
 			else if (message == "Simple mode")
 			{
 				gSimpleAnswers = !gSimpleAnswers;
-				setListener();
-				llOwnerSay("Simple answers mode " + llList2String(["DISABLED.", "ENABLED. Please remember, that this functionality is only available with chat and completions models."], gSimpleAnswers));
-				openMainMenu(id);
+				refreshState(id, "Simple answers mode " + llList2String(["DISABLED.", "ENABLED. Please note that this functionality is only available with chat and completions models."], gSimpleAnswers));
 			}
 			else if (message == "History")
 			{
 				gHistoryEnabled = !gHistoryEnabled;
-				setListener();
-				llOwnerSay("History is now " + llList2String(["DISABLED.", "ENABLED. Please remember, that this functionality is only available with chat models (3.5 Turbo and GPT-4)."], gHistoryEnabled));
-				openMainMenu(id);
+				refreshState(id, "History is now " + llList2String(["DISABLED.", "ENABLED. Please note that this functionality is only available with chat models (3.5 Turbo and GPT-4)."], gHistoryEnabled));
 			}
 			else if (message == "Owner" || message == "Same group" || message == "Everyone")
 			{
 				gListenMode = message;
-				setListener();
-				llOwnerSay("Listen mode set to: " + message);
-				openMainMenu(id);
+				refreshState(id, "Listen mode set to: " + message);
 			}
 			else if (message == "Nearby chat" || message == "Privately")
 			{
 				gAnswerIn = message;
-				setListener();
-				llOwnerSay("Answering in: " + message);
-				openMainMenu(id);
+				refreshState(id, "Answering in: " + message);
 			}
 			else if (message == "Personality")
 			{
@@ -333,7 +367,7 @@ default
 			}
 			else if (message == "Select model")
 			{
-				startDialog(id, "Select the OpenAI model.\n \n'3.5 Turbo' and 'GPT-4' are chat models with optional history support, 'Davinci' is the text completions model, 'DALL-E' can generate image links.\n \nCurrent one: " + gCurrentModelName, gModelsList);
+				startDialog(id, "Select the OpenAI model.\n \n'3.5 Turbo' and 'GPT-4' are chat models with optional history support, 'Davinci' is the text completions model, 'DALL-E' can generate links to images.\n \nCurrent one: " + gCurrentModelName, gModelsList);
 			}
 			else if (message == "Listen to")
 			{
@@ -343,8 +377,34 @@ default
 			{
 				startDialog(id, "Select where to send responses.\nCurrently: " + gAnswerIn, ["Nearby chat", "Privately"]);
 			}
+			else if (message == "Blacklist")
+			{
+				startDialog(id, "You are managing blocked avatar and object UUIDs. What would you like to do?", ["List blocks", "Add block", "Remove block"]);
+			}
+			else if (message == "List blocks")
+			{
+				listBlocks();
+				openMainMenu(id);
+			}
+			else if (message == "Add block" || message == "Remove block")
+			{
+				string label = "add to";
+				gManagingBlocks = 1;
+				if (message == "Remove block")
+				{
+					gManagingBlocks = 2;
+					label = "remove from";
+				}
+				gDialogHandle = llListen(gDialogChannel, "", id, "");
+				llTextBox(id, "\nPlease specify one single avatar or object UUID you'd like to " + label + " the blocklist storage.", gDialogChannel);
+				llSetTimerEvent(60);
+			}
 			else if (~llListFindList(gPersonalitiesList, (list)message))
 			{
+				if (gCurrentPersonalityName != message)
+				{
+					gHistoryRecords = [];
+				}
 				setPersonality(message);
 				setListener();
 				openMainMenu(id);
@@ -359,7 +419,7 @@ default
 		}
 
 		id = llGetOwnerKey(id);
-		if (gChatIsLocked || (gListenMode == "Owner" && id != gOwnerKey) || llGetAgentSize(id) == ZERO_VECTOR || llVecDist(llGetPos(), llList2Vector(llGetObjectDetails(id, [OBJECT_POS]), 0)) > 20 || (gListenMode == "Same group" && !llSameGroup(id)))
+		if (gChatIsLocked || (gListenMode == "Owner" && id != gOwnerKey) || llGetAgentSize(id) == ZERO_VECTOR || llVecDist(llGetPos(), llList2Vector(llGetObjectDetails(id, [OBJECT_POS]), 0)) > 20 || (gListenMode == "Same group" && !llSameGroup(id)) || llGetListLength(llLinksetDataFindKeys("gptblock:" + (string)id, 0, 1)) > 0)
 		{
 			return;
 		}
@@ -379,7 +439,7 @@ default
 			else
 			{
 				addToHistory("user", message);
-				promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(llList2Json(JSON_OBJECT, ["role", "system", "content", messageParsed]) + gHistoryRecords, ",") + "]"];
+				promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", messageParsed]), ",") + "]"];
 			}
 		}
 		else if (gCurrentModelName == "DALL-E")
@@ -447,6 +507,14 @@ default
 
 			setChatLock(FALSE);
 
+		}
+	}
+
+	linkset_data(integer action, string name, string value)
+	{
+		if (action == LINKSETDATA_RESET || action == LINKSETDATA_DELETE || action == LINKSETDATA_UPDATE)
+		{
+			listBlocks();
 		}
 	}
 
