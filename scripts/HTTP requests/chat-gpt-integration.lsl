@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.8.3
+// Version 2.9
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -13,10 +13,14 @@ string gChatGptApiKey = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
 // ----------------------------------
 
-// Defaults, do NOT change them here - use dialog menu instead!
+// Defaults, do NOT change them here - use the dialog menu instead! Unless you know what you are doing...
 string gListenMode = "Owner";
 string gAnswerIn = "Nearby chat";
 integer gHovertext = TRUE;
+integer gSimpleAnswers = FALSE;
+integer gHistoryEnabled = FALSE;
+
+// Models database; First one is default
 list gOpenAiModels = [
 
 	"ModelName", "3.5 Turbo",
@@ -57,6 +61,7 @@ list gOpenAiModels = [
 
 ];
 
+// Personalities database; First one is default
 list gPersonalities = [
 
 	"Assistant",
@@ -117,8 +122,6 @@ integer gDialogChannel;
 integer gDialogHandle;
 integer gManagingBlocks;
 integer gChatIsLocked;
-integer gSimpleAnswers;
-integer gHistoryEnabled;
 string gPersonalityLabels;
 string gCurrentPersonality;
 string gCurrentPersonalityName;
@@ -211,20 +214,6 @@ addToHistory(string role, string message)
 		{
 			gHistoryRecords = llList2List(gHistoryRecords, historyLength - 12, historyLength);
 		}
-	}
-}
-
-listBlocks()
-{
-	list blocks = llLinksetDataFindKeys("^gptblock:", 0, 0);
-	integer listLength = llGetListLength(blocks);
-	llOwnerSay("Blacklist items: " + (string)listLength);
-	integer i;
-	while (i < listLength)
-	{
-		string record = llGetSubString(llList2String(blocks, i), 9, -1);
-		llOwnerSay("- secondlife:///app/agent/" + record + "/about" + " - " + record);
-		++i;
 	}
 }
 
@@ -382,7 +371,16 @@ default
 			}
 			else if (message == "List blocks")
 			{
-				listBlocks();
+				list blocks = llLinksetDataFindKeys("^gptblock:", 0, 0);
+				integer listLength = llGetListLength(blocks);
+				llOwnerSay("Blacklist items: " + (string)listLength);
+				integer i;
+				while (i < listLength)
+				{
+					string record = llGetSubString(llList2String(blocks, i), 9, -1);
+					llOwnerSay("- secondlife:///app/agent/" + record + "/about" + " - " + record);
+					++i;
+				}
 				openMainMenu(id);
 			}
 			else if (message == "Add block" || message == "Remove block")
@@ -417,7 +415,6 @@ default
 			return;
 		}
 
-		id = llGetOwnerKey(id);
 		if (gChatIsLocked || (gListenMode == "Owner" && id != gOwnerKey) || llGetAgentSize(id) == ZERO_VECTOR || llVecDist(llGetPos(), llList2Vector(llGetObjectDetails(id, [OBJECT_POS]), 0)) > 20 || (gListenMode == "Same group" && !llSameGroup(id)) || llGetListLength(llLinksetDataFindKeys("gptblock:" + (string)id, 0, 1)) > 0)
 		{
 			return;
@@ -431,10 +428,10 @@ default
 		if (gCurrentModelName == "GPT-4" || gCurrentModelName == "3.5 Turbo" || gCurrentModelName == "Davinci")
 		{
 			list timeList = llParseString2List(llGetTimestamp(), ["T","."], []);
-			string messageParsed = llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "UTC now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". Person sending this query to you: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Answer must be max 1000 characters.";
+			string messageParsed = llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "UTC now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". Who sending this to you: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Answer must be max 970 characters.";
 			if (gCurrentModelName == "Davinci")
 			{
-				promptAdditions = ["user", (string)id, "prompt", messageParsed + " Reply to message: " + message];
+				promptAdditions = ["user", (string)id, "prompt", messageParsed + " Reply to message: " + llGetSubString(message, 0, 1024)];
 			}
 			else
 			{
@@ -444,7 +441,7 @@ default
 		}
 		else if (gCurrentModelName == "DALL-E")
 		{
-			promptAdditions = ["user", (string)id, "prompt", message];
+			promptAdditions = ["user", (string)id, "prompt", llGetSubString(message, 0, 1024)];
 			if (gAnswerIn == "Nearby chat")
 			{
 				llSay(0, "Query received, please be patient...");
@@ -456,7 +453,7 @@ default
 		}
 
 		gHTTPRequestId = llHTTPRequest("https://api.openai.com" + gCurrentEndpoint, [
-			HTTP_MIMETYPE, "application/json",
+			HTTP_MIMETYPE, "application/json;charset=utf-8",
 			HTTP_METHOD, "POST",
 			HTTP_BODY_MAXLENGTH, 16384,
 			HTTP_ACCEPT, "application/json",
@@ -514,7 +511,7 @@ default
 	{
 		if (action == LINKSETDATA_RESET || action == LINKSETDATA_DELETE || action == LINKSETDATA_UPDATE)
 		{
-			listBlocks();
+			llOwnerSay("Blacklist storage modified.");
 		}
 	}
 
