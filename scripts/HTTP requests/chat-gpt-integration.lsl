@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.9.1
+// Version 2.10
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -19,6 +19,7 @@ string gAnswerIn = "Nearby chat";
 integer gHovertext = TRUE;
 integer gSimpleAnswers = FALSE;
 integer gHistoryEnabled = FALSE;
+integer gPrefixMode = FALSE;
 
 // Models database; First one is default
 list gOpenAiModels = [
@@ -122,6 +123,7 @@ integer gDialogChannel;
 integer gDialogHandle;
 integer gManagingBlocks;
 integer gChatIsLocked;
+integer gPrefixLength;
 string gPersonalityLabels;
 string gCurrentPersonality;
 string gCurrentPersonalityName;
@@ -146,7 +148,7 @@ setListener()
 	}
 	gListenHandle = llListen(PUBLIC_CHANNEL, "", listenKey, "");
 	llListenControl(gListenHandle, gEnabled);
-	llSetText(gCurrentPersonalityName + " (" + gCurrentModelName + ")" + llList2String(["", "\nHistory enabled"], gHistoryEnabled) + llList2String(["", "\nSimple answers"], gSimpleAnswers) + "\n" + llList2String(["DISABLED", "ENABLED"], gEnabled), <1, 1, 1>, gHovertext * 0.6);
+	llSetText(gCurrentPersonalityName + " (" + gCurrentModelName + ")" + llList2String(["", "\nHistory enabled"], gHistoryEnabled) + llList2String(["", "\nPrefix mode"], gPrefixMode) + llList2String(["", "\nSimple answers"], gSimpleAnswers) + "\n" + llList2String(["DISABLED", "ENABLED"], gEnabled), <1, 1, 1>, gHovertext * 0.6);
 }
 
 setModel(string modelName)
@@ -155,6 +157,7 @@ setModel(string modelName)
 	gCurrentEndpoint = llList2String(gOpenAiModels, modelPosition + 2);
 	gCurrentModelData = llList2List(gOpenAiModels, modelPosition + 5, modelPosition + 4 + llList2Integer(gOpenAiModels, modelPosition + 4) * 2);
 	gCurrentModelName = modelName;
+	gPrefixLength = llStringLength(modelName) + 1;
 	llOwnerSay("Model selected: " + modelName);
 }
 
@@ -224,11 +227,12 @@ openMainMenu(key person)
 		"Current state: " + llList2String(["DISABLED", "ENABLED"], gEnabled) +
 		"\nCurrent personality: " + gCurrentPersonalityName +
 		"\nCurrent model: " + gCurrentModelName +
-		"\nHistory (3.5 Turbo / GPT-4): " + llList2String(["DISABLED", "ENABLED"], gHistoryEnabled) +
-		"\nSimple answers (chats / completions): " + llList2String(["DISABLED", "ENABLED"], gSimpleAnswers) +
-		"\nListening to: " + gListenMode +
-		"\nAnswering in: " + gAnswerIn,
-		["Simple mode", "History", "Hovertext", "Listen to", "Answer in", "Select model", "ON / OFF", "Personality", "Blacklist"]
+		"\nSimple answers: " + llList2String(["DISABLED", "ENABLED"], gSimpleAnswers) +
+		"\nPrefix mode: " + llList2String(["DISABLED", "ENABLED"], gPrefixMode) +
+		"\nHistory: " + llList2String(["DISABLED", "ENABLED"], gHistoryEnabled) +
+		"\nListen to: " + gListenMode +
+		"\nAnswer in: " + gAnswerIn,
+		["Simple mode", "History", "Hovertext", "Prefix mode", "Listen to", "Answer in", "Personality", "Select model", "Blacklist", "ON / OFF"]
 	);
 }
 
@@ -339,6 +343,11 @@ default
 				gHistoryEnabled = !gHistoryEnabled;
 				refreshState(id, "History is now " + llList2String(["DISABLED.", "ENABLED. Please note that this functionality is only available with chat models (3.5 Turbo and GPT-4)."], gHistoryEnabled));
 			}
+			else if (message == "Prefix mode")
+			{
+				gPrefixMode = !gPrefixMode;
+				refreshState(id, "Prefix mode is now " + llList2String(["DISABLED.", "ENABLED. Every message needs to be preceded with '" + gCurrentPersonalityName + ",' in order to get a response."], gPrefixMode));
+			}
 			else if (message == "Owner" || message == "Same group" || message == "Everyone")
 			{
 				gListenMode = message;
@@ -415,15 +424,25 @@ default
 			return;
 		}
 
+		message = llStringTrim(message, STRING_TRIM);
+
 		// Remove 'llGetAgentSize(id) == ZERO_VECTOR' and set listen mode to 'everyone' or 'same group' if you want script reacting to objects
 		if (gChatIsLocked || (gListenMode == "Owner" && id != gOwnerKey) || llGetAgentSize(id) == ZERO_VECTOR || llVecDist(llGetPos(), llList2Vector(llGetObjectDetails(id, [OBJECT_POS]), 0)) > 20 || (gListenMode == "Same group" && !llSameGroup(id)) || llGetListLength(llLinksetDataFindKeys("gptblock:" + (string)id, 0, 1)) > 0)
 		{
 			return;
 		}
 
+		if (gPrefixMode)
+		{
+			if (llSubStringIndex(llToLower(message), llToLower(gCurrentPersonalityName) + ",") != 0)
+			{
+				return;
+			}
+			message = llStringTrim(llGetSubString(message, gPrefixLength, llStringLength(message) - 1), STRING_TRIM);
+		}
+
 		setChatLock(TRUE);
 		gAnswerToAvatar = id;
-		message = llStringTrim(message, STRING_TRIM);
 		list promptAdditions;
 
 		if (gCurrentModelName == "GPT-4" || gCurrentModelName == "3.5 Turbo" || gCurrentModelName == "Davinci")
