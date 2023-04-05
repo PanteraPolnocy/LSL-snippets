@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.10.3
+// Version 2.10.4
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -430,17 +430,19 @@ default
 			return;
 		}
 
+		setChatLock(TRUE);
 		message = llStringTrim(message, STRING_TRIM);
+
 		if (gPrefixMode)
 		{
 			if (llSubStringIndex(llToLower(message), llToLower(gCurrentPersonalityName) + ",") != 0)
 			{
+				setChatLock(FALSE);
 				return;
 			}
 			message = llStringTrim(llGetSubString(message, gPrefixLength, llStringLength(message) - 1), STRING_TRIM_HEAD);
 		}
 
-		setChatLock(TRUE);
 		gAnswerToAvatar = id;
 		list promptAdditions;
 
