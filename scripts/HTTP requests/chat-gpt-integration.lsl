@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.10.1
+// Version 2.10.2
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -16,6 +16,7 @@ string gChatGptApiKey = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 // Defaults, do NOT change them here - use the dialog menu instead! Unless you know what you are doing...
 string gListenMode = "Owner";
 string gAnswerIn = "Nearby chat";
+integer gEnabled = FALSE;
 integer gHovertext = TRUE;
 integer gSimpleAnswers = FALSE;
 integer gHistoryEnabled = FALSE;
@@ -116,7 +117,6 @@ list gPersonalities = [
 ];
 
 // Set in runtime
-integer gEnabled;
 integer gScriptReady;
 integer gListenHandle;
 integer gDialogChannel;
