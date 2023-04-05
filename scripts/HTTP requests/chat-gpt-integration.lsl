@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.10.2
+// Version 2.10.3
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -424,14 +424,13 @@ default
 			return;
 		}
 
-		message = llStringTrim(message, STRING_TRIM);
-
 		// Remove 'llGetAgentSize(id) == ZERO_VECTOR' and set listen mode to 'everyone' or 'same group' if you want script reacting to objects
 		if (gChatIsLocked || (gListenMode == "Owner" && id != gOwnerKey) || llGetAgentSize(id) == ZERO_VECTOR || llVecDist(llGetPos(), llList2Vector(llGetObjectDetails(id, [OBJECT_POS]), 0)) > 20 || (gListenMode == "Same group" && !llSameGroup(id)) || llGetListLength(llLinksetDataFindKeys("gptblock:" + (string)id, 0, 1)) > 0)
 		{
 			return;
 		}
 
+		message = llStringTrim(message, STRING_TRIM);
 		if (gPrefixMode)
 		{
 			if (llSubStringIndex(llToLower(message), llToLower(gCurrentPersonalityName) + ",") != 0)
