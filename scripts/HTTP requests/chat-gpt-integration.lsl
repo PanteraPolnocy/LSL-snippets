@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.10.4
+// Version 2.10.5
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -474,7 +474,7 @@ default
 		}
 
 		gHTTPRequestId = llHTTPRequest("https://api.openai.com" + gCurrentEndpoint, [
-			HTTP_MIMETYPE, "application/json;charset=utf-8",
+			HTTP_MIMETYPE, "application/json",
 			HTTP_METHOD, "POST",
 			HTTP_BODY_MAXLENGTH, 16384,
 			HTTP_ACCEPT, "application/json",
