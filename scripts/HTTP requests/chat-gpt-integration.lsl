@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.10.5
+// Version 2.10.6
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -213,9 +213,9 @@ addToHistory(string role, string message)
 		}
 		gHistoryRecords = gHistoryRecords + llList2Json(JSON_OBJECT, ["role", role, "content", llGetSubString((string)llParseString2List(message, ["\\n"], []), 0, 1024)]);
 		integer historyLength = llGetListLength(gHistoryRecords);
-		if (historyLength > 12)
+		if (historyLength > 10)
 		{
-			gHistoryRecords = llList2List(gHistoryRecords, historyLength - 12, historyLength);
+			gHistoryRecords = llList2List(gHistoryRecords, historyLength - 10, historyLength);
 		}
 	}
 }
