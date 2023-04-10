@@ -30,7 +30,7 @@ list gOpenAiModels = [
 	"Items", 6,
 	"model", "gpt-3.5-turbo",
 	"temperature", 0.9,
-	"max_tokens", 500,
+	"max_tokens", 750,
 	"top_p", 1,
 	"frequency_penalty", 0.0,
 	"presence_penalty", 0.6,
@@ -40,7 +40,7 @@ list gOpenAiModels = [
 	"Items", 6,
 	"model", "gpt-4",
 	"temperature", 0.9,
-	"max_tokens", 500,
+	"max_tokens", 750,
 	"top_p", 1,
 	"frequency_penalty", 0.0,
 	"presence_penalty", 0.6,
@@ -50,7 +50,7 @@ list gOpenAiModels = [
 	"Items", 6,
 	"model", "text-davinci-003",
 	"temperature", 0.9,
-	"max_tokens", 500,
+	"max_tokens", 750,
 	"top_p", 1,
 	"frequency_penalty", 0.0,
 	"presence_penalty", 0.6,
@@ -449,7 +449,7 @@ default
 		if (gCurrentModelName == "GPT-4" || gCurrentModelName == "3.5 Turbo" || gCurrentModelName == "Davinci")
 		{
 			list timeList = llParseString2List(llGetTimestamp(), ["T","."], []);
-			string messageParsed = llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "UTC now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". Who sending this to you: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Answer must be max 970 characters.";
+			string messageParsed = "Instructions: " + llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". Who is sending this to you: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Answer MUST be max 970 characters. Do not mention that you are a language model.";
 			if (gCurrentModelName == "Davinci")
 			{
 				promptAdditions = ["user", (string)id, "prompt", messageParsed + " Reply to message: " + llGetSubString(message, 0, 1024)];
