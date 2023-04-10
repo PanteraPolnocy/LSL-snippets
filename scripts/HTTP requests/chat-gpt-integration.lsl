@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.10.6
+// Version 2.10.7
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -212,6 +212,7 @@ addToHistory(string role, string message)
 			gHistoryRecords = [];
 		}
 		gHistoryRecords = gHistoryRecords + llList2Json(JSON_OBJECT, ["role", role, "content", llGetSubString((string)llParseString2List(message, ["\\n"], []), 0, 1024)]);
+		message = "";
 		integer historyLength = llGetListLength(gHistoryRecords);
 		if (historyLength > 10)
 		{
@@ -390,6 +391,7 @@ default
 					llOwnerSay("- secondlife:///app/agent/" + record + "/about" + " - " + record);
 					++i;
 				}
+				blocks = [];
 				openMainMenu(id);
 			}
 			else if (message == "Add block" || message == "Remove block")
@@ -450,6 +452,7 @@ default
 		{
 			list timeList = llParseString2List(llGetTimestamp(), ["T","."], []);
 			string messageParsed = "Instructions: " + llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". Who is sending this to you: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Answer MUST be max 970 characters. Do not mention that you are a language model.";
+			timeList = [];
 			if (gCurrentModelName == "Davinci")
 			{
 				promptAdditions = ["user", (string)id, "prompt", messageParsed + " Reply to message: " + llGetSubString(message, 0, 1024)];
@@ -473,6 +476,7 @@ default
 			}
 		}
 
+		message = "";
 		gHTTPRequestId = llHTTPRequest("https://api.openai.com" + gCurrentEndpoint, [
 			HTTP_MIMETYPE, "application/json",
 			HTTP_METHOD, "POST",
@@ -485,6 +489,7 @@ default
 
 	http_response(key request_id, integer status, list metadata, string body)
 	{
+		metadata = [];
 		if (gHTTPRequestId == request_id)
 		{
 
@@ -511,6 +516,7 @@ default
 				return;
 			}
 
+			body = "";
 			result = llStringTrim(result, STRING_TRIM);
 			addToHistory("assistant", result);
 			result = "([https://platform.openai.com/docs/usage-policies AI]) " + result;
