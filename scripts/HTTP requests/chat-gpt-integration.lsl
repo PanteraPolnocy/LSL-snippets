@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.10.7
+// Version 2.11
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -39,16 +39,6 @@ list gOpenAiModels = [
 	"Endpoint", "/v1/chat/completions",
 	"Items", 6,
 	"model", "gpt-4",
-	"temperature", 0.9,
-	"max_tokens", 750,
-	"top_p", 1,
-	"frequency_penalty", 0.0,
-	"presence_penalty", 0.6,
-
-	"ModelName", "Davinci",
-	"Endpoint", "/v1/completions",
-	"Items", 6,
-	"model", "text-davinci-003",
 	"temperature", 0.9,
 	"max_tokens", 750,
 	"top_p", 1,
@@ -365,7 +355,7 @@ default
 			}
 			else if (message == "Select model")
 			{
-				startDialog(id, "Select the OpenAI model.\n \n'3.5 Turbo' and 'GPT-4' are chat models with optional history support, 'Davinci' is the text completions model, 'DALL-E' can generate links to images.\n \nCurrent one: " + gCurrentModelName, gModelsList);
+				startDialog(id, "Select the OpenAI model.\n \n'3.5 Turbo' and 'GPT-4' are chat models with optional history support, 'DALL-E' can generate links to images.\n \nCurrent one: " + gCurrentModelName, gModelsList);
 			}
 			else if (message == "Listen to")
 			{
@@ -448,20 +438,13 @@ default
 		gAnswerToAvatar = id;
 		list promptAdditions;
 
-		if (gCurrentModelName == "GPT-4" || gCurrentModelName == "3.5 Turbo" || gCurrentModelName == "Davinci")
+		if (gCurrentModelName == "GPT-4" || gCurrentModelName == "3.5 Turbo")
 		{
 			list timeList = llParseString2List(llGetTimestamp(), ["T","."], []);
 			string messageParsed = "Instructions: " + llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". Who is sending this to you: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Answer MUST be max 970 characters. Do not mention that you are a language model.";
 			timeList = [];
-			if (gCurrentModelName == "Davinci")
-			{
-				promptAdditions = ["user", (string)id, "prompt", messageParsed + " Reply to message: " + llGetSubString(message, 0, 1024)];
-			}
-			else
-			{
-				addToHistory("user", message);
-				promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", messageParsed]), ",") + "]"];
-			}
+			addToHistory("user", message);
+			promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", messageParsed]), ",") + "]"];
 		}
 		else if (gCurrentModelName == "DALL-E")
 		{
@@ -495,12 +478,6 @@ default
 
 			// GPT-4, GPT 3.5 Turbo
 			string result = llJsonGetValue(body, ["choices", 0, "message", "content"]);
-
-			// Davinci
-			if (result == JSON_INVALID || result == JSON_NULL)
-			{
-				result = llJsonGetValue(body, ["choices", 0, "text"]);
-			}
 
 			// DALL-E
 			if (result == JSON_INVALID || result == JSON_NULL)
