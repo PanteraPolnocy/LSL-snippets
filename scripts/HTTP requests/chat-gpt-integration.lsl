@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.11
+// Version 2.12
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -227,6 +227,18 @@ openMainMenu(key person)
 	);
 }
 
+answerUser(string theMessage)
+{
+	if (gAnswerIn == "Nearby chat")
+	{
+		llSay(0, theMessage);
+	}
+	else
+	{
+		llRegionSayTo(gAnswerToAvatar, 0, theMessage);
+	}
+}
+
 // Script body
 
 default
@@ -449,14 +461,7 @@ default
 		else if (gCurrentModelName == "DALL-E")
 		{
 			promptAdditions = ["user", (string)id, "prompt", llGetSubString(message, 0, 1024)];
-			if (gAnswerIn == "Nearby chat")
-			{
-				llSay(0, "Query received, please be patient...");
-			}
-			else
-			{
-				llRegionSayTo(gAnswerToAvatar, 0, "Query received, please be patient...");
-			}
+			answerUser("Query received, please be patient...");
 		}
 
 		message = "";
@@ -497,27 +502,24 @@ default
 			result = llStringTrim(result, STRING_TRIM);
 			addToHistory("assistant", result);
 			result = "([https://platform.openai.com/docs/usage-policies AI]) " + result;
-			
+
 			// Result Multi-Say Parsing by Duckie Dickins
 			integer currentPos = 0;
 			integer chunkSize = 1024;
 			integer totalLength = llStringLength(result);
-			
-			// Split the string into 1KB chunks
-			while (currentPos < totalLength)
+			if (totalLength >= chunkSize)
 			{
-				string chunk = llGetSubString(result, currentPos, currentPos + chunkSize - 1);
-
-				if (gAnswerIn == "Nearby chat")
+				while (currentPos < totalLength)
 				{
-					llSay(0, chunk);
+					string chunk = llGetSubString(result, currentPos, currentPos + chunkSize - 1);
+					answerUser(chunk);
 					currentPos += chunkSize;
+					llSleep(1);
 				}
-				else
-				{
-					llRegionSayTo(gAnswerToAvatar, 0, chunk);
-					currentPos += chunkSize;
-				}
+			}
+			else
+			{
+				answerUser(result);
 			}
 
 			setChatLock(FALSE);
