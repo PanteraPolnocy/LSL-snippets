@@ -511,8 +511,7 @@ default
 			{
 				while (currentPos < totalLength)
 				{
-					string chunk = llGetSubString(result, currentPos, currentPos + chunkSize - 1);
-					answerUser(chunk);
+					answerUser(llGetSubString(result, currentPos, currentPos + chunkSize - 1));
 					currentPos += chunkSize;
 					llSleep(1);
 				}
