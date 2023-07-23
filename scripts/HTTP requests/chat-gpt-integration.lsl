@@ -499,26 +499,26 @@ default
 			result = "([https://platform.openai.com/docs/usage-policies AI]) " + result;
 			
 			// Result Multi-Say Parsing by Duckie Dickins
-            integer currentPos = 0;
-            integer chunkSize = 1024;
-            integer totalLength = llStringLength(result);
-            
-            // Split the string into 1KB chunks
-            while (currentPos < totalLength)
-            {
-                string chunk = llGetSubString(result, currentPos, currentPos + chunkSize - 1);
+			integer currentPos = 0;
+			integer chunkSize = 1024;
+			integer totalLength = llStringLength(result);
+			
+			// Split the string into 1KB chunks
+			while (currentPos < totalLength)
+			{
+				string chunk = llGetSubString(result, currentPos, currentPos + chunkSize - 1);
 
-                if (gAnswerIn == "Nearby chat")
-                {
-                    llSay(0, chunk);
-                    currentPos += chunkSize;
-                }
-                else
-                {
-                    llRegionSayTo(gAnswerToAvatar, 0, chunk);
-                    currentPos += chunkSize;
-                }
-            }
+				if (gAnswerIn == "Nearby chat")
+				{
+					llSay(0, chunk);
+					currentPos += chunkSize;
+				}
+				else
+				{
+					llRegionSayTo(gAnswerToAvatar, 0, chunk);
+					currentPos += chunkSize;
+				}
+			}
 
 			setChatLock(FALSE);
 
