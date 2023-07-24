@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.12
+// Version 2.12.1
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -504,11 +504,11 @@ default
 			result = "([https://platform.openai.com/docs/usage-policies AI]) " + result;
 
 			// Result Multi-Say Parsing by Duckie Dickins
-			integer currentPos = 0;
 			integer chunkSize = 1024;
 			integer totalLength = llStringLength(result);
 			if (totalLength >= chunkSize)
 			{
+				integer currentPos = 0;
 				while (currentPos < totalLength)
 				{
 					answerUser(llGetSubString(result, currentPos, currentPos + chunkSize - 1));
