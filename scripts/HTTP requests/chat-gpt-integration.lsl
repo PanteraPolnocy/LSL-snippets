@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.12.1
+// Version 2.12.2
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -452,11 +452,10 @@ default
 
 		if (gCurrentModelName == "GPT-4" || gCurrentModelName == "3.5 Turbo")
 		{
-			list timeList = llParseString2List(llGetTimestamp(), ["T","."], []);
-			string messageParsed = "Instructions: " + llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". Who is sending this to you: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Answer MUST be max 970 characters. Do not mention that you are a language model.";
-			timeList = [];
 			addToHistory("user", message);
-			promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", messageParsed]), ",") + "]"];
+			list timeList = llParseString2List(llGetTimestamp(), ["T","."], []);
+			promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". User's name: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Do not EVER mention that you're ChatGPT or a language model, NEVER leave the role. Your answer MUST be max 970 characters."]), ",") + "]"];
+			timeList = [];
 		}
 		else if (gCurrentModelName == "DALL-E")
 		{
