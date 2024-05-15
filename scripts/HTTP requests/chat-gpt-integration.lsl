@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.12.3
+// Version 2.13
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -65,9 +65,17 @@ list gOpenAiModels = [
 	"frequency_penalty", 0.0,
 	"presence_penalty", 0.6,
 
-	"ModelName", "DALL-E",
+	"ModelName", "DALL-E 2",
 	"Endpoint", "/v1/images/generations",
-	"Items", 2,
+	"Items", 3,
+	"model", "dall-e-2",
+	"n", 1,
+	"size", "1024x1024",
+
+	"ModelName", "DALL-E 3",
+	"Endpoint", "/v1/images/generations",
+	"Items", 3,
+	"model", "dall-e-3",
 	"n", 1,
 	"size", "1024x1024"
 
@@ -477,7 +485,7 @@ default
 			promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". User's name: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Do not EVER mention that you're ChatGPT or a language model, NEVER leave the role. Your answer MUST be max 970 characters."]), ",") + "]"];
 			timeList = [];
 		}
-		else if (gCurrentModelName == "DALL-E")
+		else if (gCurrentModelName == "DALL-E 2" || gCurrentModelName == "DALL-E 3")
 		{
 			promptAdditions = ["user", (string)id, "prompt", llGetSubString(message, 0, 1024)];
 			answerUser("Query received, please be patient...");
