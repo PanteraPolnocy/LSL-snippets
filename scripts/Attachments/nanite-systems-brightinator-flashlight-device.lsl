@@ -2,7 +2,7 @@
 // Tested with ARES 0.5.3
 // Written by PanteraPolnocy
 
-string gVersion = "1.0.4";
+string gVersion = "1.0.5";
 
 // Device configuration below, feel free to play with these
 
@@ -11,11 +11,11 @@ integer gFullBrightWhenDisabled = FALSE; // TRUE / FALSE
 float gGlowWhenFullPower = 1.0; // 0.0 - 1.0
 float gGlowWhenDisabled = 0.0; // 0.0 - 1.0
 float gLightRadiusWhenFullPower = 15.0; // 0.1 - 20.0
-string gProjectorTexture = "b2877a04-54e8-46c6-214e-65ad6ed0ef37"; // NULL_KEY or texture UUID
+string gLightProjectorTexture = "b2877a04-54e8-46c6-214e-65ad6ed0ef37"; // NULL_KEY or texture UUID
 
 string gNS_DeviceName = "brightinator"; // One-word mnemonic
 integer gNS_PowerDrainWhenFullPower = 60; // In Watts
-string gNS_IconTexture = "ea574d21-e7f9-7c65-8b30-b1edc0909633"; // Texture UUID
+string gNS_IconTexture = "ea574d21-e7f9-7c65-8b30-b1edc0909633"; // Texture UUID; Visible in ARES HUD
 vector gNS_Color = ZERO_VECTOR; // Light color; if ZERO_VECTOR here, ask Nanite OS for primary color; If not ZERO_VECTOR, use this value instead
 
 // Internal variables below, filled in runtime
@@ -28,8 +28,9 @@ key gOwner;
 
 integer gNS_DeviceRegistered;
 integer gNS_LightBusChannel;
-integer gNS_SystemIsOn;
-float gNS_SystemPowerLevel;
+integer gNS_SystemIsOn = -1;
+float gNS_SystemPowerLevel = -1;
+float gNS_SystemPowerChargePresent = -1;
 
 updateLight()
 {
@@ -38,7 +39,7 @@ updateLight()
 		lightBus("load " + gNS_DeviceName + " drainpower " + (string)llRound(gNS_PowerDrainWhenFullPower * gSelectedDevicePowerLevel));
 		llSetLinkPrimitiveParamsFast(LINK_THIS, [
 			PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenFullPower, PRIM_POINT_LIGHT, TRUE, gNS_Color, 1.0, (gLightRadiusWhenFullPower * gSelectedDevicePowerLevel), 0.0,
-			PRIM_PROJECTOR, gProjectorTexture, 1.3, 0.0, 0.0,
+			PRIM_PROJECTOR, gLightProjectorTexture, 1.3, 0.0, 0.0,
 			PRIM_GLOW, ALL_SIDES, (gGlowWhenFullPower * gSelectedDevicePowerLevel)
 		]);
 	}
@@ -141,28 +142,36 @@ default
 			if (command == "power")
 			{
 				gNS_SystemPowerLevel = llList2Float(commandParts, 1);
-				if (gNS_SystemPowerLevel <= 0)
+				integer currentChargeState = llCeil(gNS_SystemPowerLevel);
+				if (currentChargeState != gNS_SystemPowerChargePresent)
 				{
+					gNS_SystemPowerChargePresent = currentChargeState;
 					updateLight();
 				}
 			}
 			else if (command == "on")
 			{
-				gNS_SystemIsOn = TRUE;
-				updateLight();
+				if (!gNS_SystemIsOn)
+				{
+					gNS_SystemIsOn = TRUE;
+					updateLight();
+				}
 			}
 			else if (command == "off")
 			{
-				gNS_SystemIsOn = FALSE;
-				updateLight();
+				if (gNS_SystemIsOn)
+				{
+					gNS_SystemIsOn = FALSE;
+					updateLight();
+				}
 			}
 			else if (command == "add-confirm")
 			{
 				gNS_DeviceRegistered = TRUE;
+				updateLight();
 				lightBus("icon " + gNS_IconTexture);
 				lightBus("color-q");
 				lightBus("power-q");
-				updateLight();
 			}
 			else if (command == "remove-confirm" || command == "add-fail" || command == "remove")
 			{
