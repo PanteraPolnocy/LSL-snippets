@@ -1,8 +1,8 @@
 // Nanite Systems light bus protocol flashlight / light generator device
-// Tested with ARES 0.5.3
+// Tested with ARES 0.5.3 / NS-112 AIDE
 // Written by PanteraPolnocy
 
-string gVersion = "1.1.0";
+string gVersion = "1.1.1";
 
 // Device configuration below, feel free to play with these
 
@@ -139,7 +139,6 @@ default
 		gNS_LightBusChannel = 105 - (integer)("0x" + llGetSubString(gOwner, 29, 35));
 		llListen(gNS_LightBusChannel, "", NULL_KEY, "");
 		lightBus("add " + gNS_DeviceName + " " + gVersion);
-		llSetMemoryLimit(llGetUsedMemory() + 10240);
 	}
 
 	on_rez(integer sp)
@@ -256,14 +255,16 @@ default
 				gNS_DeviceRegistered = TRUE;
 				updateLight();
 				lightBus("icon " + gNS_IconTexture);
+				lightBus("connected " + gNS_DeviceName);
 				lightBus("color-q");
 				lightBus("power-q");
 				lightBus("conf-get " + gNS_DeviceName + ".type\n" + gNS_DeviceName + ".power");
 			}
-			else if (command == "add-fail" || command == "remove")
+			else if (command == "add-fail" || command == "remove" || command == "remove-confirm")
 			{
 				gNS_DeviceRegistered = FALSE;
 				gDeviceIsEnabled = FALSE;
+				lightBus("disconnected " + gNS_DeviceName);
 				updateLight();
 			}
 			else if (command == "probe")
