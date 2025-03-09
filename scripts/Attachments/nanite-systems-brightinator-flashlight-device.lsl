@@ -2,7 +2,7 @@
 // Tested with ARES 0.5.3
 // Written by PanteraPolnocy
 
-string gVersion = "1.0.5";
+string gVersion = "1.0.6";
 
 // Device configuration below, feel free to play with these
 
@@ -28,13 +28,13 @@ key gOwner;
 
 integer gNS_DeviceRegistered;
 integer gNS_LightBusChannel;
-integer gNS_SystemIsOn = -1;
+integer gNS_SystemPowerChargePresent = -1;
 float gNS_SystemPowerLevel = -1;
-float gNS_SystemPowerChargePresent = -1;
+string gNS_LastSystemState = "";
 
 updateLight()
 {
-	if (gNS_SystemIsOn && gNS_DeviceRegistered && gSelectedDevicePowerLevel > 0 && gNS_SystemPowerLevel > 0)
+	if (gNS_LastSystemState == "on" && gNS_DeviceRegistered && gSelectedDevicePowerLevel > 0 && gNS_SystemPowerLevel > 0)
 	{
 		lightBus("load " + gNS_DeviceName + " drainpower " + (string)llRound(gNS_PowerDrainWhenFullPower * gSelectedDevicePowerLevel));
 		llSetLinkPrimitiveParamsFast(LINK_THIS, [
@@ -151,17 +151,17 @@ default
 			}
 			else if (command == "on")
 			{
-				if (!gNS_SystemIsOn)
+				if (gNS_LastSystemState != "on")
 				{
-					gNS_SystemIsOn = TRUE;
+					gNS_LastSystemState = "on";
 					updateLight();
 				}
 			}
 			else if (command == "off")
 			{
-				if (gNS_SystemIsOn)
+				if (gNS_LastSystemState != "off")
 				{
-					gNS_SystemIsOn = FALSE;
+					gNS_LastSystemState = "off";
 					updateLight();
 				}
 			}
@@ -206,7 +206,7 @@ default
 			else if (command == "peek" || command == "poke")
 			{
 				key answerTo = llList2Key(commandParts, 1);
-				if (!gNS_SystemIsOn)
+				if (gNS_LastSystemState != "on")
 				{
 					toUser(answerTo, "System is offline, cannot access '" + gNS_DeviceName + "'");
 					return;
