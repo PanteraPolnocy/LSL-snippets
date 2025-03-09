@@ -1,7 +1,8 @@
 // Nanite Systems light bus protocol flashlight / light generator device
-// Version 1.0.1 (08 Mar 2025)
 // Tested with ARES 0.5.3
 // Written by PanteraPolnocy
+
+string gVersion = "1.0.2";
 
 // Device configuration, feel free to play with these
 integer gFullBrightWhenFullPower = TRUE; // TRUE / FALSE
@@ -77,7 +78,7 @@ default
 		gDialogChannel = (integer)(llFrand(-10000000)-10000000);
 		gNS_Channel = 105 - (integer)("0x" + llGetSubString(gOwner, 29, 35));
 		llListen(gNS_Channel, "", NULL_KEY, "");
-		lightBus("add " + gNS_DeviceName);
+		lightBus("add " + gNS_DeviceName + " " + gVersion);
 		llSetMemoryLimit(llGetUsedMemory() + 5120);
 	}
 
@@ -131,12 +132,12 @@ default
 				return;
 			}
 
-			list comandParts = llParseStringKeepNulls(message, [" "], []);
-			string command = llList2String(comandParts, 0);
+			list commandParts = llParseStringKeepNulls(message, [" "], []);
+			string command = llList2String(commandParts, 0);
 
 			if (command == "power")
 			{
-				gNS_SystemPowerLevel = llList2Float(comandParts, 1);
+				gNS_SystemPowerLevel = llList2Float(commandParts, 1);
 			}
 			else if (command == "add-confirm")
 			{
@@ -163,11 +164,11 @@ default
 			else if (command == "probe")
 			{
 				gNS_DeviceRegistered = FALSE;
-				lightBus("add " + gNS_DeviceName);
+				lightBus("add " + gNS_DeviceName + " " + gVersion);
 			}
 			else if (command == "color")
 			{
-				gNS_Color = <llList2Float(comandParts, 1), llList2Float(comandParts, 2), llList2Float(comandParts, 3)>;
+				gNS_Color = <llList2Float(commandParts, 1), llList2Float(commandParts, 2), llList2Float(commandParts, 3)>;
 			}
 			else if (command == "icon-q")
 			{
@@ -175,7 +176,7 @@ default
 			}
 			else if (command == "peek" || command == "poke")
 			{
-				key answerTo = llList2Key(comandParts, 1);
+				key answerTo = llList2Key(commandParts, 1);
 				if (!gNS_SystemIsOn)
 				{
 					toUser(answerTo, "System is offline, cannot access '" + gNS_DeviceName + "'");
@@ -184,7 +185,7 @@ default
 				if (command == "peek")
 				{
 					toUser(answerTo,
-						"\n'" + gNS_DeviceName + "' module status:" +
+						"\n'" + gNS_DeviceName + " (" + gVersion + ")' module status:" +
 						"\nEnabled: " + llList2String(["No", "Yes"], (integer)gSelectedDevicePowerLevel) +
 						"\nPower drain: " + (string)llRound(gNS_PowerDrainWhenFullPower * gSelectedDevicePowerLevel) + " W" +
 						"\nLight colour: " + (string)gNS_Color
