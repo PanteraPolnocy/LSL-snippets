@@ -2,7 +2,7 @@
 // Tested with ARES 0.5.3
 // Written by PanteraPolnocy
 
-string gVersion = "1.0.6";
+string gVersion = "1.0.7";
 
 // Device configuration below, feel free to play with these
 
@@ -116,14 +116,14 @@ default
 
 			if (channel == gDialogChannel)
 			{
+				stopListener();
 				if (!gNS_DeviceRegistered)
 				{
 					return;
 				}
-				stopListener();
-				toUser(id, "[" + gNS_DeviceName + "] " + message);
-				if (message == "Disabled" || (gNS_SystemPowerLevel > 0 && message == "Power: 50%") || (gNS_SystemPowerLevel > 0 && message == "Power: 100%"))
+				else if (message == "Disabled" || (gNS_SystemPowerLevel > 0 && message == "Power: 50%") || (gNS_SystemPowerLevel > 0 && message == "Power: 100%"))
 				{
+					toUser(id, "[" + gNS_DeviceName + "] " + message);
 					if (message == "Disabled") {gSelectedDevicePowerLevel = 0;}
 					else if (message == "Power: 50%") {gSelectedDevicePowerLevel = 0.5;}
 					else if (message == "Power: 100%") {gSelectedDevicePowerLevel = 1.0;}
@@ -165,6 +165,18 @@ default
 					updateLight();
 				}
 			}
+			else if (command == "bolts")
+			{
+				string bolts = llList2String(commandParts, 1);
+				if (bolts == "on")
+				{
+					llOwnerSay("@detach=n");
+				}
+				else if (bolts == "off")
+				{
+					llOwnerSay("@detach=y");
+				}
+			}
 			else if (command == "add-confirm")
 			{
 				gNS_DeviceRegistered = TRUE;
@@ -173,19 +185,11 @@ default
 				lightBus("color-q");
 				lightBus("power-q");
 			}
-			else if (command == "remove-confirm" || command == "add-fail" || command == "remove")
+			else if (command == "add-fail" || command == "remove")
 			{
 				gNS_DeviceRegistered = FALSE;
 				gSelectedDevicePowerLevel = 0;
 				updateLight();
-				if (command == "remove")
-				{
-					lightBus("remove " + gNS_DeviceName);
-					if (llGetAttached())
-					{
-						llRequestPermissions(gOwner, PERMISSION_ATTACH);
-					}
-				}
 			}
 			else if (command == "probe")
 			{
@@ -206,12 +210,12 @@ default
 			else if (command == "peek" || command == "poke")
 			{
 				key answerTo = llList2Key(commandParts, 1);
-				if (gNS_LastSystemState != "on")
+				if (gNS_LastSystemState != "on" || !gNS_DeviceRegistered)
 				{
-					toUser(answerTo, "System is offline, cannot access '" + gNS_DeviceName + "'");
+					toUser(answerTo, "No power supplied, cannot access '" + gNS_DeviceName + "'");
 					return;
 				}
-				if (command == "peek")
+				else if (command == "peek")
 				{
 					toUser(answerTo,
 						"\n========\n'" + gNS_DeviceName + "' module status:" +
@@ -229,14 +233,6 @@ default
 				}
 			}
 
-		}
-	}
-
-	run_time_permissions(integer perm)
-	{
-		if (perm & PERMISSION_ATTACH)
-		{
-			llDetachFromAvatar();
 		}
 	}
 
