@@ -79,7 +79,7 @@ default
 		gNS_Channel = 105 - (integer)("0x" + llGetSubString(gOwner, 29, 35));
 		llListen(gNS_Channel, "", NULL_KEY, "");
 		lightBus("add " + gNS_DeviceName + " " + gVersion);
-		llSetMemoryLimit(llGetUsedMemory() + 5120);
+		llSetMemoryLimit(llGetUsedMemory() + 10240);
 	}
 
 	on_rez(integer sp)
