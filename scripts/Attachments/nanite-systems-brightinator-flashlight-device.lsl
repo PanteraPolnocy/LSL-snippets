@@ -2,31 +2,34 @@
 // Tested with ARES 0.5.3
 // Written by PanteraPolnocy
 
-string gVersion = "1.0.3";
+string gVersion = "1.0.4";
 
-// Device configuration, feel free to play with these
+// Device configuration below, feel free to play with these
+
 integer gFullBrightWhenFullPower = TRUE; // TRUE / FALSE
 integer gFullBrightWhenDisabled = FALSE; // TRUE / FALSE
 float gGlowWhenFullPower = 1.0; // 0.0 - 1.0
 float gGlowWhenDisabled = 0.0; // 0.0 - 1.0
 float gLightRadiusWhenFullPower = 15.0; // 0.1 - 20.0
 string gProjectorTexture = "b2877a04-54e8-46c6-214e-65ad6ed0ef37"; // NULL_KEY or texture UUID
+
 string gNS_DeviceName = "brightinator"; // One-word mnemonic
 integer gNS_PowerDrainWhenFullPower = 60; // In Watts
 string gNS_IconTexture = "ea574d21-e7f9-7c65-8b30-b1edc0909633"; // Texture UUID
+vector gNS_Color = ZERO_VECTOR; // Light color; if ZERO_VECTOR here, ask Nanite OS for primary color; If not ZERO_VECTOR, use this value instead
 
-// Internal variables, filled in runtime
+// Internal variables below, filled in runtime
 // DO NOT MODIFY
+
 float gSelectedDevicePowerLevel;
 integer gDialogChannel;
 integer gListenHandle;
 key gOwner;
 
 integer gNS_DeviceRegistered;
-integer gNS_Channel;
+integer gNS_LightBusChannel;
 integer gNS_SystemIsOn;
 float gNS_SystemPowerLevel;
-vector gNS_Color = <1, 1, 1>;
 
 updateLight()
 {
@@ -54,7 +57,7 @@ updateLight()
 
 lightBus(string message)
 {
-	llRegionSayTo(gOwner, gNS_Channel, message);
+	llRegionSayTo(gOwner, gNS_LightBusChannel, message);
 }
 
 toUser(key user, string message)
@@ -76,8 +79,8 @@ default
 		updateLight();
 		gOwner = llGetOwner();
 		gDialogChannel = (integer)(llFrand(-10000000)-10000000);
-		gNS_Channel = 105 - (integer)("0x" + llGetSubString(gOwner, 29, 35));
-		llListen(gNS_Channel, "", NULL_KEY, "");
+		gNS_LightBusChannel = 105 - (integer)("0x" + llGetSubString(gOwner, 29, 35));
+		llListen(gNS_LightBusChannel, "", NULL_KEY, "");
 		lightBus("add " + gNS_DeviceName + " " + gVersion);
 		llSetMemoryLimit(llGetUsedMemory() + 10240);
 	}
@@ -118,9 +121,9 @@ default
 				}
 				stopListener();
 				toUser(id, "[" + gNS_DeviceName + "] " + message);
-				if (message == "Disable" || (gNS_SystemPowerLevel > 0 && message == "Power: 50%") || (gNS_SystemPowerLevel > 0 && message == "Power: 100%"))
+				if (message == "Disabled" || (gNS_SystemPowerLevel > 0 && message == "Power: 50%") || (gNS_SystemPowerLevel > 0 && message == "Power: 100%"))
 				{
-					if (message == "Disable") {gSelectedDevicePowerLevel = 0;}
+					if (message == "Disabled") {gSelectedDevicePowerLevel = 0;}
 					else if (message == "Power: 50%") {gSelectedDevicePowerLevel = 0.5;}
 					else if (message == "Power: 100%") {gSelectedDevicePowerLevel = 1.0;}
 					updateLight();
@@ -182,7 +185,10 @@ default
 			}
 			else if (command == "color")
 			{
-				gNS_Color = <llList2Float(commandParts, 1), llList2Float(commandParts, 2), llList2Float(commandParts, 3)>;
+				if (gNS_Color == ZERO_VECTOR)
+				{
+					gNS_Color = <llList2Float(commandParts, 1), llList2Float(commandParts, 2), llList2Float(commandParts, 3)>;
+				}
 			}
 			else if (command == "icon-q")
 			{
@@ -199,16 +205,17 @@ default
 				if (command == "peek")
 				{
 					toUser(answerTo,
-						"\n'" + gNS_DeviceName + " (" + gVersion + ")' module status:" +
-						"\nEnabled: " + llList2String(["No", "Yes"], (integer)gSelectedDevicePowerLevel) +
-						"\nPower drain: " + (string)llRound(gNS_PowerDrainWhenFullPower * gSelectedDevicePowerLevel) + " W" +
-						"\nLight colour: " + (string)gNS_Color
+						"\n========\n'" + gNS_DeviceName + "' module status:" +
+						"\nCurrently enabled: " + llList2String(["NO", "YES"], (integer)gSelectedDevicePowerLevel) +
+						"\nPower drain: " + (string)llRound(gNS_PowerDrainWhenFullPower * gSelectedDevicePowerLevel) + " W / " + (string)gNS_PowerDrainWhenFullPower + " W (" + (string)llRound(gSelectedDevicePowerLevel * 100) + "%)" +
+						"\nLight color: " + (string)gNS_Color +
+						"\nFirmware version: " + gVersion + "\n========"
 					);
 				}
 				else
 				{
 					gListenHandle = llListen(gDialogChannel, "", answerTo, "");
-					llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.", ["Disable", "Power: 100%", "Power: 50%"], gDialogChannel);
+					llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.", ["Disabled", "Power: 100%", "Power: 50%"], gDialogChannel);
 					llSetTimerEvent(60);
 				}
 			}
