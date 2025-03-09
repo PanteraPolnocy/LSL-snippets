@@ -2,7 +2,7 @@
 // Tested with ARES 0.5.3
 // Written by PanteraPolnocy
 
-string gVersion = "1.0.2";
+string gVersion = "1.0.3";
 
 // Device configuration, feel free to play with these
 integer gFullBrightWhenFullPower = TRUE; // TRUE / FALSE
@@ -138,6 +138,20 @@ default
 			if (command == "power")
 			{
 				gNS_SystemPowerLevel = llList2Float(commandParts, 1);
+				if (gNS_SystemPowerLevel <= 0)
+				{
+					updateLight();
+				}
+			}
+			else if (command == "on")
+			{
+				gNS_SystemIsOn = TRUE;
+				updateLight();
+			}
+			else if (command == "off")
+			{
+				gNS_SystemIsOn = FALSE;
+				updateLight();
 			}
 			else if (command == "add-confirm")
 			{
@@ -197,19 +211,6 @@ default
 					llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.", ["Disable", "Power: 100%", "Power: 50%"], gDialogChannel);
 					llSetTimerEvent(60);
 				}
-			}
-			else if (command == "on")
-			{
-				gNS_SystemIsOn = TRUE;
-				updateLight();
-			}
-			else if (command == "off" || gNS_SystemPowerLevel <= 0)
-			{
-				if (command == "off")
-				{
-					gNS_SystemIsOn = FALSE;
-				}
-				updateLight();
 			}
 
 		}
