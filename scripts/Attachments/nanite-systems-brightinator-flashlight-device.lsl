@@ -2,7 +2,7 @@
 // Tested with ARES 0.5.3
 // Written by PanteraPolnocy
 
-string gVersion = "1.0.7";
+string gVersion = "1.1.0";
 
 // Device configuration below, feel free to play with these
 
@@ -21,7 +21,11 @@ vector gNS_Color = ZERO_VECTOR; // Light color; if ZERO_VECTOR here, ask Nanite 
 // Internal variables below, filled in runtime
 // DO NOT MODIFY
 
+string gLightType = "Solid";
+string gLastLightType;
+integer gStrobeSwitch;
 float gSelectedDevicePowerLevel;
+integer gDeviceIsEnabled;
 integer gDialogChannel;
 integer gListenHandle;
 key gOwner;
@@ -34,26 +38,65 @@ string gNS_LastSystemState = "";
 
 updateLight()
 {
-	if (gNS_LastSystemState == "on" && gNS_DeviceRegistered && gSelectedDevicePowerLevel > 0 && gNS_SystemPowerLevel > 0)
+	if (gNS_LastSystemState == "on" && gNS_DeviceRegistered && gDeviceIsEnabled && gSelectedDevicePowerLevel > 0 && gNS_SystemPowerLevel > 0)
 	{
-		lightBus("load " + gNS_DeviceName + " drainpower " + (string)llRound(gNS_PowerDrainWhenFullPower * gSelectedDevicePowerLevel));
-		llSetLinkPrimitiveParamsFast(LINK_THIS, [
-			PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenFullPower, PRIM_POINT_LIGHT, TRUE, gNS_Color, 1.0, (gLightRadiusWhenFullPower * gSelectedDevicePowerLevel), 0.0,
-			PRIM_PROJECTOR, gLightProjectorTexture, 1.3, 0.0, 0.0,
-			PRIM_GLOW, ALL_SIDES, (gGlowWhenFullPower * gSelectedDevicePowerLevel)
-		]);
+
+		if (gLightType != gLastLightType)
+		{
+			gLastLightType = gLightType;
+			if (gLightType == "Solid")
+			{
+				setTimerEvent2(0.0);
+			}
+			else if (gLightType == "Slow strobe")
+			{
+				setTimerEvent2(2.0);
+			}
+			else if (gLightType == "Fast strobe")
+			{
+				setTimerEvent2(0.5);
+			}
+		}
+
+		integer lightOn = TRUE;
+		if (gLightType != "Solid")
+		{
+			lightOn = gStrobeSwitch;
+		}
+
+		if (lightOn)
+		{
+			lightBus("load " + gNS_DeviceName + " drainpower " + (string)llRound(gNS_PowerDrainWhenFullPower * gSelectedDevicePowerLevel));
+			llSetLinkPrimitiveParamsFast(LINK_THIS, [
+				PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenFullPower, PRIM_POINT_LIGHT, TRUE, gNS_Color, 1.0, (gLightRadiusWhenFullPower * gSelectedDevicePowerLevel), 0.0,
+				PRIM_PROJECTOR, gLightProjectorTexture, 1.3, 0.0, 0.0,
+				PRIM_GLOW, ALL_SIDES, (gGlowWhenFullPower * gSelectedDevicePowerLevel)
+			]);
+		}
+		else
+		{
+			switchOffLight();
+		}
+
 	}
 	else
 	{
-		if (gNS_DeviceRegistered)
-		{
-			lightBus("load " + gNS_DeviceName + " drainpower 0");
-		}
-		llSetLinkPrimitiveParamsFast(LINK_THIS, [
-			PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenDisabled, PRIM_POINT_LIGHT, FALSE, ZERO_VECTOR, 0.0, 0.0, 0.0,
-			PRIM_GLOW, ALL_SIDES, gGlowWhenDisabled
-		]);
+		setTimerEvent2(0.0);
+		gLastLightType = "";
+		switchOffLight();
 	}
+}
+
+switchOffLight()
+{
+	if (gNS_DeviceRegistered)
+	{
+		lightBus("load " + gNS_DeviceName + " drainpower 0");
+	}
+	llSetLinkPrimitiveParamsFast(LINK_THIS, [
+		PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenDisabled, PRIM_POINT_LIGHT, FALSE, ZERO_VECTOR, 0.0, 0.0, 0.0,
+		PRIM_GLOW, ALL_SIDES, gGlowWhenDisabled
+	]);
 }
 
 lightBus(string message)
@@ -70,6 +113,19 @@ stopListener()
 {
 	llSetTimerEvent(0);
 	llListenRemove(gListenHandle);
+}
+
+// Using no_sensor() as second llSetTimerEvent()
+setTimerEvent2(float time)
+{
+	if (time <= 0)
+	{
+		llSensorRemove();
+	}
+	else
+	{
+		llSensorRepeat("cake is a lie", NULL_KEY, AGENT_BY_LEGACY_NAME, 0.001, 0.001, time);
+	}
 }
 
 default
@@ -108,6 +164,12 @@ default
 		stopListener();
 	}
 
+	no_sensor()
+	{
+		gStrobeSwitch = !gStrobeSwitch;
+		updateLight();
+	}
+
 	listen(integer channel, string name, key id, string message)
 	{
 		id = llGetOwnerKey(id);
@@ -121,17 +183,29 @@ default
 				{
 					return;
 				}
-				else if (message == "Disabled" || (gNS_SystemPowerLevel > 0 && message == "Power: 50%") || (gNS_SystemPowerLevel > 0 && message == "Power: 100%"))
+				else if (gNS_SystemPowerLevel > 0)
 				{
 					toUser(id, "[" + gNS_DeviceName + "] " + message);
-					if (message == "Disabled") {gSelectedDevicePowerLevel = 0;}
+					if (message == "Enabled")
+					{
+						gDeviceIsEnabled = TRUE;
+						if (gSelectedDevicePowerLevel == 0.0)
+						{
+							gSelectedDevicePowerLevel = 1.0;
+						}
+					}
+					else if (message == "Disabled") {gDeviceIsEnabled = FALSE;}
+					else if (message == "Power: 25%") {gSelectedDevicePowerLevel = 0.25;}
 					else if (message == "Power: 50%") {gSelectedDevicePowerLevel = 0.5;}
 					else if (message == "Power: 100%") {gSelectedDevicePowerLevel = 1.0;}
+					else if (message == "Solid" || message == "Slow strobe" || message == "Fast strobe") {gLightType = message;}
+					// --- Does not seem to be present in ARES yet: '[_hardware] unimplemented: conf-set'
+					// lightBus("conf-set " + gNS_DeviceName + ".type " + gLightType + "\n" + gNS_DeviceName + ".power " + (string)gSelectedDevicePowerLevel);
 					updateLight();
 				}
 				else
 				{
-					toUser(id, "Not enough power to enable '" + gNS_DeviceName + "'.");
+					toUser(id, "Not enough power to operate '" + gNS_DeviceName + "'.");
 				}
 				return;
 			}
@@ -184,11 +258,12 @@ default
 				lightBus("icon " + gNS_IconTexture);
 				lightBus("color-q");
 				lightBus("power-q");
+				lightBus("conf-get " + gNS_DeviceName + ".type\n" + gNS_DeviceName + ".power");
 			}
 			else if (command == "add-fail" || command == "remove")
 			{
 				gNS_DeviceRegistered = FALSE;
-				gSelectedDevicePowerLevel = 0;
+				gDeviceIsEnabled = FALSE;
 				updateLight();
 			}
 			else if (command == "probe")
@@ -201,6 +276,30 @@ default
 				if (gNS_Color == ZERO_VECTOR)
 				{
 					gNS_Color = <llList2Float(commandParts, 1), llList2Float(commandParts, 2), llList2Float(commandParts, 3)>;
+				}
+			}
+			else if (command == "conf")
+			{
+				list confs = llParseStringKeepNulls(llGetSubString(message, 5, -1), ["\n"], []);
+				integer confsLength = llGetListLength(confs);
+				integer i;
+				while (i < confsLength)
+				{
+					string currentRow = llStringTrim(llList2String(confs, i), STRING_TRIM);
+					string confName = llStringTrim(llGetSubString(currentRow, 0, llSubStringIndex(currentRow, " ")), STRING_TRIM);
+					string confValue = llStringTrim(llGetSubString(currentRow, llSubStringIndex(currentRow, " "), -1), STRING_TRIM);
+					if (confValue != "﷐" && llStringLength(confValue) > 0)
+					{
+						if (confName == gNS_DeviceName + ".type")
+						{
+							gLightType = confValue;
+						}
+						else if (confName == gNS_DeviceName + ".power")
+						{
+							gSelectedDevicePowerLevel = (float)confValue;
+						}
+					}
+					++i;
 				}
 			}
 			else if (command == "icon-q")
@@ -219,8 +318,9 @@ default
 				{
 					toUser(answerTo,
 						"\n========\n'" + gNS_DeviceName + "' module status:" +
-						"\nCurrently enabled: " + llList2String(["NO", "YES"], (integer)gSelectedDevicePowerLevel) +
-						"\nPower drain: " + (string)llRound(gNS_PowerDrainWhenFullPower * gSelectedDevicePowerLevel) + " W / " + (string)gNS_PowerDrainWhenFullPower + " W (" + (string)llRound(gSelectedDevicePowerLevel * 100) + "%)" +
+						"\nCurrently enabled: " + llList2String(["NO", "YES"], gDeviceIsEnabled) +
+						"\nPower drain: " + (string)llRound(gDeviceIsEnabled * gNS_PowerDrainWhenFullPower * gSelectedDevicePowerLevel) + " W / " + (string)gNS_PowerDrainWhenFullPower + " W (" + (string)llRound(gDeviceIsEnabled * gSelectedDevicePowerLevel * 100) + "%)" +
+						"\nLight type: " + gLightType +
 						"\nLight color: " + (string)gNS_Color +
 						"\nFirmware version: " + gVersion + "\n========"
 					);
@@ -228,7 +328,7 @@ default
 				else
 				{
 					gListenHandle = llListen(gDialogChannel, "", answerTo, "");
-					llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.", ["Disabled", "Power: 100%", "Power: 50%"], gDialogChannel);
+					llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.", ["Power: 100%", "Power: 50%", "Power: 25%", "Solid", "Slow strobe", "Fast strobe", "Disabled", "Enabled"], gDialogChannel);
 					llSetTimerEvent(60);
 				}
 			}
