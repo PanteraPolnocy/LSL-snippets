@@ -1,5 +1,5 @@
 // Nanite Systems light bus protocol flashlight / light generator device
-// Version 1.0 (08 Mar 2025)
+// Version 1.0.1 (08 Mar 2025)
 // Tested with ARES 0.5.3
 // Written by PanteraPolnocy
 
@@ -17,16 +17,15 @@ string gNS_IconTexture = "ea574d21-e7f9-7c65-8b30-b1edc0909633"; // Texture UUID
 // Internal variables, filled in runtime
 // DO NOT MODIFY
 float gSelectedDevicePowerLevel;
+integer gDialogChannel;
+integer gListenHandle;
 key gOwner;
 
 integer gNS_DeviceRegistered;
 integer gNS_Channel;
 integer gNS_SystemIsOn;
 float gNS_SystemPowerLevel;
-vector gNS_Color;
-
-integer gDialogChannel;
-integer gListenHandle;
+vector gNS_Color = <1, 1, 1>;
 
 updateLight()
 {
@@ -41,17 +40,15 @@ updateLight()
 	}
 	else
 	{
-		forceDisableLight();
+		if (gNS_DeviceRegistered)
+		{
+			lightBus("load " + gNS_DeviceName + " drainpower 0");
+		}
+		llSetLinkPrimitiveParamsFast(LINK_THIS, [
+			PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenDisabled, PRIM_POINT_LIGHT, FALSE, ZERO_VECTOR, 0.0, 0.0, 0.0,
+			PRIM_GLOW, ALL_SIDES, gGlowWhenDisabled
+		]);
 	}
-}
-
-forceDisableLight()
-{
-	lightBus("load " + gNS_DeviceName + " drainpower 0");
-	llSetLinkPrimitiveParamsFast(LINK_THIS, [
-		PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenDisabled, PRIM_POINT_LIGHT, FALSE, ZERO_VECTOR, 0.0, 0.0, 0.0,
-		PRIM_GLOW, ALL_SIDES, gGlowWhenDisabled
-	]);
 }
 
 lightBus(string message)
@@ -75,7 +72,7 @@ default
 
 	state_entry()
 	{
-		forceDisableLight();
+		updateLight();
 		gOwner = llGetOwner();
 		gDialogChannel = (integer)(llFrand(-10000000)-10000000);
 		gNS_Channel = 105 - (integer)("0x" + llGetSubString(gOwner, 29, 35));
@@ -144,10 +141,10 @@ default
 			else if (command == "add-confirm")
 			{
 				gNS_DeviceRegistered = TRUE;
-				lightBus("load " + gNS_DeviceName + " drainpower 0");
 				lightBus("icon " + gNS_IconTexture);
 				lightBus("color-q");
 				lightBus("power-q");
+				updateLight();
 			}
 			else if (command == "remove-confirm" || command == "add-fail" || command == "remove")
 			{
@@ -211,7 +208,7 @@ default
 				{
 					gNS_SystemIsOn = FALSE;
 				}
-				forceDisableLight();
+				updateLight();
 			}
 
 		}
