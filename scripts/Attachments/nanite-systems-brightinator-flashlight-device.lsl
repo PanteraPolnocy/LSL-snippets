@@ -6,7 +6,7 @@
 // While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
 // All trademarks and product names belong to their respective owners.
 
-string gVersion = "1.1.9";
+string gVersion = "1.2.0";
 
 // Device configuration below, feel free to play with these
 
@@ -15,7 +15,7 @@ integer gFullBrightWhenDisabled = FALSE; // TRUE / FALSE
 float gGlowWhenFullPower = 1.0; // 0.0 - 1.0
 float gGlowWhenDisabled = 0.0; // 0.0 - 1.0
 float gLightRadiusWhenFullPower = 15.0; // 0.1 - 20.0
-string gLightProjectorTexture = "b2877a04-54e8-46c6-214e-65ad6ed0ef37"; // NULL_KEY or texture UUID
+string gLightProjectorDefaultTexture = "b2877a04-54e8-46c6-214e-65ad6ed0ef37"; // NULL_KEY or texture UUID
 
 string gNS_DeviceName = "brightinator"; // One-word mnemonic
 integer gNS_PowerDrawWhenFullPower = 60; // In Watts
@@ -25,6 +25,7 @@ vector gNS_Color = ZERO_VECTOR; // Light color; if ZERO_VECTOR here, ask Nanite 
 // Internal variables below, filled in runtime
 // DO NOT MODIFY
 
+string gLightProjectorCurrentTexture;
 string gLightType = "Solid";
 string gLastLightType;
 integer gStrobeSwitch;
@@ -34,6 +35,7 @@ float gSelectedDevicePowerLevel;
 integer gDeviceIsEnabled;
 integer gDialogChannel;
 integer gListenHandle;
+integer gIsInCustomTextureMode;
 key gOwner;
 
 key gNS_DeviceRegisteredWith = NULL_KEY;
@@ -68,7 +70,7 @@ updateLight()
 			lightBus("load " + gNS_DeviceName + " drainpower " + (string)llRound(gNS_PowerDrawWhenFullPower * gSelectedDevicePowerLevel));
 			llSetLinkPrimitiveParamsFast(LINK_THIS, [
 				PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenFullPower, PRIM_POINT_LIGHT, TRUE, gNS_Color, 1.0, (gLightRadiusWhenFullPower * gSelectedDevicePowerLevel), 0.0,
-				PRIM_PROJECTOR, gLightProjectorTexture, 1.3, 0.0, 0.0,
+				PRIM_PROJECTOR, gLightProjectorCurrentTexture, 1.3, 0.0, 0.0,
 				PRIM_GLOW, ALL_SIDES, (gGlowWhenFullPower * gSelectedDevicePowerLevel)
 			]);
 		}
@@ -121,7 +123,7 @@ string getPowerDraw()
 openDialogMenu(key answerTo)
 {
 	gListenHandle = llListen(gDialogChannel, "", answerTo, "");
-	llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.\n Enabled: " + llList2String(["NO", "YES"], gDeviceIsEnabled) + " | " + getPowerDraw() + " | " + gLightType, ["Power: 100%", "Power: 50%", "Power: 25%", "Solid", "Slow strobe", "Fast strobe", "DISABLED", "ENABLED", "[CANCEL]"], gDialogChannel);
+	llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.\n Enabled: " + llList2String(["NO", "YES"], gDeviceIsEnabled) + " | " + getPowerDraw() + " | " + gLightType, ["Power: 100%", "Power: 50%", "Power: 25%", "Solid", "Slow strobe", "Fast strobe", "Img: Custom", "Img: Default", "[CANCEL]", "DISABLED", "ENABLED"], gDialogChannel);
 	setTimerEvent2(60);
 }
 
@@ -151,6 +153,7 @@ default
 	{
 		updateLight();
 		gOwner = llGetOwner();
+		gLightProjectorCurrentTexture = gLightProjectorDefaultTexture;
 		gDialogChannel = (integer)(llFrand(-10000000)-10000000);
 		gNS_LightBusChannel = 105 - (integer)("0x" + llGetSubString(gOwner, 29, 35));
 		if (gNS_Color == ZERO_VECTOR)
@@ -168,7 +171,7 @@ default
 
 	attach(key id)
 	{
-		if (NULL_KEY)
+		if (id == NULL_KEY)
 		{
 			if (gNS_DeviceRegisteredWith != NULL_KEY)
 			{
@@ -195,6 +198,8 @@ default
 		{
 
 			stopListener();
+			message = llStringTrim(message, STRING_TRIM);
+
 			if (gNS_DeviceRegisteredWith == NULL_KEY || message == "[CANCEL]")
 			{
 				return;
@@ -209,6 +214,37 @@ default
 			if (gNS_SystemPowerLevel > 0)
 			{
 				toUser(id, "[" + gNS_DeviceName + "] " + message);
+
+				if (!gIsInCustomTextureMode && message == "Img: Custom")
+				{
+					gIsInCustomTextureMode = TRUE;
+					llTextBox(id, "\nPlease specify image UUID to cast, or leave empty to ignore.", gDialogChannel);
+					gListenHandle = llListen(gDialogChannel, "", id, "");
+					setTimerEvent2(60);
+					return;
+				}
+				else if (gIsInCustomTextureMode)
+				{
+					gIsInCustomTextureMode = FALSE;
+					if (llStringLength(message) > 0)
+					{
+						key checkKey = (key)message;
+						if (checkKey)
+						{
+							gLightProjectorCurrentTexture = message;
+							toUser(id, "Texture set.");
+						}
+						else
+						{
+							toUser(id, "The provided string does not seem to be a valid texture. Try again.");
+						}
+					}
+					else
+					{
+						toUser(id, "Empty string provided. Image has been reset to the default value.");
+					}
+				}
+
 				if (message == "ENABLED")
 				{
 					gDeviceIsEnabled = TRUE;
@@ -222,8 +258,10 @@ default
 				else if (message == "Power: 50%") {gSelectedDevicePowerLevel = 0.5;}
 				else if (message == "Power: 100%") {gSelectedDevicePowerLevel = 1.0;}
 				else if (message == "Solid" || message == "Slow strobe" || message == "Fast strobe") {gLightType = message;}
+				else if (message == "Img: Default") {gLightProjectorCurrentTexture = gLightProjectorDefaultTexture;}
+
 				// --- Does not seem to be present in ARES yet: '[_hardware] unimplemented: conf-set'
-				// lightBus("conf-set " + gNS_DeviceName + ".type " + gLightType + "\n" + gNS_DeviceName + ".power " + (string)gSelectedDevicePowerLevel);
+				// lightBus("conf-set " + gNS_DeviceName + ".type " + gLightType + "\n" + gNS_DeviceName + ".power " + (string)gSelectedDevicePowerLevel + "\n" + gNS_DeviceName + ".texture " + gLightProjectorCurrentTexture);
 				updateLight();
 				openDialogMenu(id);
 			}
@@ -282,7 +320,7 @@ default
 				lightBus("icon " + gNS_IconTexture);
 				lightBus("connected " + gNS_DeviceName);
 				lightBus("power-q");
-				lightBus("conf-get interface.sound.act\ninterface.sound.volume\n" + gNS_DeviceName + ".type\n" + gNS_DeviceName + ".power");
+				lightBus("conf-get interface.sound.act\ninterface.sound.volume\n" + gNS_DeviceName + ".type\n" + gNS_DeviceName + ".power\n" + gNS_DeviceName + ".texture");
 				if (gAllowDynamicColorSwapping)
 				{
 					lightBus("color-q");
@@ -323,6 +361,7 @@ default
 						else if (confName == "interface.sound.volume") {gNS_SoundVolume = (float)confValue;}
 						else if (confName == gNS_DeviceName + ".type") {gLightType = confValue;}
 						else if (confName == gNS_DeviceName + ".power") {gSelectedDevicePowerLevel = (float)confValue;}
+						else if (confName == gNS_DeviceName + ".texture") {gLightProjectorCurrentTexture = confValue;}
 					}
 					++i;
 				}
