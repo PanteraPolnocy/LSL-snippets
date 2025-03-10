@@ -1,8 +1,12 @@
-// Nanite Systems light bus protocol flashlight / light generator device
-// Tested with ARES 0.5.3 / NS-112 AIDE
+// Flashlight and light generator device, compatible with Nanite Systems' Light Bus protocol
+// Tested with ARES 0.5.3 / NS-112 AIDE (March 2025)
 // Written by PanteraPolnocy
 
-string gVersion = "1.1.6";
+// This project is an independent creation and is not officially affiliated with Nanite Systems.
+// While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
+// All trademarks and product names belong to their respective owners.
+
+string gVersion = "1.1.7";
 
 // Device configuration below, feel free to play with these
 
