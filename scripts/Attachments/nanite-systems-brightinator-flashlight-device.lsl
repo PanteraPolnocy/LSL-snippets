@@ -2,7 +2,7 @@
 // Tested with ARES 0.5.3 / NS-112 AIDE
 // Written by PanteraPolnocy
 
-string gVersion = "1.1.4";
+string gVersion = "1.1.5";
 
 // Device configuration below, feel free to play with these
 
@@ -170,7 +170,7 @@ default
 
 	listen(integer channel, string name, key id, string message)
 	{
-
+		id = llGetOwnerKey(id);
 		if (channel == gDialogChannel)
 		{
 
@@ -209,11 +209,8 @@ default
 				llPlaySound(gNS_SoundSample, gNS_SoundVolume);
 			}
 
-			return;
 		}
-
-		id = llGetOwnerKey(id);
-		if (id == gOwner)
+		else if (id == gOwner)
 		{
 			list commandParts = llParseStringKeepNulls(message, [" "], []);
 			string command = llList2String(commandParts, 0);
@@ -337,7 +334,6 @@ default
 				}
 			}
 		}
-
 	}
 
 }
