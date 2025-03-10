@@ -6,7 +6,7 @@
 // While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
 // All trademarks and product names belong to their respective owners.
 
-string gVersion = "1.2.1";
+string gVersion = "1.2.2";
 
 // Device configuration below, feel free to play with these
 
@@ -18,6 +18,7 @@ float gLightRadiusWhenFullPower = 15.0; // 0.1 - 20.0
 string gLightProjectorDefaultTexture = "b2877a04-54e8-46c6-214e-65ad6ed0ef37"; // NULL_KEY or texture UUID
 
 string gNS_DeviceName = "brightinator"; // One-word mnemonic
+string gNS_CustomToogleCommand = "toglight"; // @command to switch the light on/off
 integer gNS_PowerDrawWhenFullPower = 60; // In Watts
 string gNS_IconTexture = "ea574d21-e7f9-7c65-8b30-b1edc0909633"; // Texture UUID; Visible in ARES HUD
 vector gNS_Color = ZERO_VECTOR; // Light color; if ZERO_VECTOR here, ask Nanite OS for primary color; If not ZERO_VECTOR, use this value instead
@@ -31,7 +32,7 @@ string gLastLightType;
 integer gStrobeSwitch;
 integer gAllowDynamicColorSwapping;
 
-float gSelectedDevicePowerLevel;
+float gSelectedDevicePowerLevel = 1.0;
 integer gDeviceIsEnabled;
 integer gDialogChannel;
 integer gListenHandle;
@@ -48,7 +49,7 @@ string gNS_SoundSample;
 
 updateLight()
 {
-	if (gNS_LastSystemState == "on" && gNS_DeviceRegisteredWith != NULL_KEY && gDeviceIsEnabled && gSelectedDevicePowerLevel > 0 && gNS_SystemPowerLevel > 0)
+	if (gNS_LastSystemState == "on" && gNS_DeviceRegisteredWith != NULL_KEY && gDeviceIsEnabled && gNS_SystemPowerLevel > 0)
 	{
 
 		if (gLightType != gLastLightType)
@@ -112,12 +113,20 @@ lightBus(string message)
 
 toUser(key user, string message)
 {
-	llRegionSayTo(user, 0, message);
+	llRegionSayTo(user, 0, "[" + gNS_DeviceName + "] " + message);
 }
 
 string getPowerDraw()
 {
 	return (string)llRound(gDeviceIsEnabled * gNS_PowerDrawWhenFullPower * gSelectedDevicePowerLevel) + " W / " + (string)gNS_PowerDrawWhenFullPower + " W (" + (string)llRound(gDeviceIsEnabled * gSelectedDevicePowerLevel * 100) + "%)";
+}
+
+playSound()
+{
+	if (gNS_SoundVolume > 0 && gNS_SoundSample != "")
+	{
+		llPlaySound(gNS_SoundSample, gNS_SoundVolume);
+	}
 }
 
 openDialogMenu(key answerTo)
@@ -205,18 +214,14 @@ default
 				return;
 			}
 
-			if (gNS_SoundVolume > 0 && gNS_SoundSample != "")
-			{
-				llPlaySound(gNS_SoundSample, gNS_SoundVolume);
-			}
-
+			playSound();
 			id = llGetOwnerKey(id);
 			if (gNS_SystemPowerLevel > 0)
 			{
 
 				if (message != "")
 				{
-				`	toUser(id, "[" + gNS_DeviceName + "] " + message);
+				`	toUser(id, message);
 				}
 
 				if (!gIsInCustomTextureMode && message == "Img: Custom")
@@ -249,14 +254,7 @@ default
 					}
 				}
 
-				if (message == "ENABLED")
-				{
-					gDeviceIsEnabled = TRUE;
-					if (gSelectedDevicePowerLevel == 0.0)
-					{
-						gSelectedDevicePowerLevel = 1.0;
-					}
-				}
+				if (message == "ENABLED") {gDeviceIsEnabled = TRUE;}
 				else if (message == "DISABLED") {gDeviceIsEnabled = FALSE;}
 				else if (message == "Power: 25%") {gSelectedDevicePowerLevel = 0.25;}
 				else if (message == "Power: 50%") {gSelectedDevicePowerLevel = 0.5;}
@@ -272,7 +270,7 @@ default
 			}
 			else
 			{
-				toUser(id, "Not enough power to operate '" + gNS_DeviceName + "'.");
+				toUser(id, "Not enough power to operate.");
 			}
 
 		}
@@ -325,6 +323,7 @@ default
 				lightBus("connected " + gNS_DeviceName);
 				lightBus("power-q");
 				lightBus("conf-get interface.sound.act\ninterface.sound.volume\n" + gNS_DeviceName + ".type\n" + gNS_DeviceName + ".power\n" + gNS_DeviceName + ".texture");
+				lightBus("add-command " + gNS_CustomToogleCommand);
 				if (gAllowDynamicColorSwapping)
 				{
 					lightBus("color-q");
@@ -384,22 +383,41 @@ default
 				key answerTo = llList2Key(commandParts, 1);
 				if (gNS_LastSystemState != "on" || gNS_DeviceRegisteredWith == NULL_KEY)
 				{
-					toUser(answerTo, "No power supplied, cannot access '" + gNS_DeviceName + "'");
+					toUser(answerTo, "No power supplied, cannot access the device.");
 				}
 				else if (command == "peek")
 				{
 					toUser(answerTo,
-						"\n========\n'" + gNS_DeviceName + "' module status:" +
+						"\n========\nModule status:" +
 						"\nCurrently enabled: " + llList2String(["NO", "YES"], gDeviceIsEnabled) +
 						"\nPower draw: " + getPowerDraw() +
 						"\nLight type: " + gLightType +
 						"\nLight color: " + (string)gNS_Color +
+						"\nToggle command: @" + gNS_CustomToogleCommand +
 						"\nFirmware version: " + gVersion + "\n========"
 					);
 				}
 				else
 				{
 					openDialogMenu(answerTo);
+				}
+			}
+			else if (command == "command")
+			{
+				if (llList2String(commandParts, 2) == gNS_CustomToogleCommand)
+				{
+					key answerTo = llList2Key(commandParts, 1);
+					if (gNS_LastSystemState != "on" || gNS_DeviceRegisteredWith == NULL_KEY)
+					{
+						toUser(answerTo, "No power supplied, cannot access the device.'");
+					}
+					else
+					{
+						playSound();
+						gDeviceIsEnabled = !gDeviceIsEnabled;
+						toUser(answerTo, llList2String(["Disabled", "Enabled"], gDeviceIsEnabled));
+						updateLight();
+					}
 				}
 			}
 		}
