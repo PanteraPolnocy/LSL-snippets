@@ -2,7 +2,7 @@
 // Tested with ARES 0.5.3 / NS-112 AIDE
 // Written by PanteraPolnocy
 
-string gVersion = "1.1.2";
+string gVersion = "1.1.3";
 
 // Device configuration below, feel free to play with these
 
@@ -14,7 +14,7 @@ float gLightRadiusWhenFullPower = 15.0; // 0.1 - 20.0
 string gLightProjectorTexture = "b2877a04-54e8-46c6-214e-65ad6ed0ef37"; // NULL_KEY or texture UUID
 
 string gNS_DeviceName = "brightinator"; // One-word mnemonic
-integer gNS_PowerDrainWhenFullPower = 60; // In Watts
+integer gNS_PowerDrawWhenFullPower = 60; // In Watts
 string gNS_IconTexture = "ea574d21-e7f9-7c65-8b30-b1edc0909633"; // Texture UUID; Visible in ARES HUD
 vector gNS_Color = ZERO_VECTOR; // Light color; if ZERO_VECTOR here, ask Nanite OS for primary color; If not ZERO_VECTOR, use this value instead
 
@@ -35,8 +35,10 @@ key gOwner;
 integer gNS_DeviceRegistered;
 integer gNS_LightBusChannel;
 integer gNS_SystemPowerChargePresent = -1;
+float gNS_SoundVolume;
 float gNS_SystemPowerLevel = -1;
-string gNS_LastSystemState = "";
+string gNS_LastSystemState;
+string gNS_SoundSample;
 
 updateLight()
 {
@@ -46,18 +48,9 @@ updateLight()
 		if (gLightType != gLastLightType)
 		{
 			gLastLightType = gLightType;
-			if (gLightType == "Solid")
-			{
-				setTimerEvent2(0.0);
-			}
-			else if (gLightType == "Slow strobe")
-			{
-				setTimerEvent2(2.0);
-			}
-			else if (gLightType == "Fast strobe")
-			{
-				setTimerEvent2(0.5);
-			}
+			if (gLightType == "Solid") {llSetTimerEvent(0.0);}
+			else if (gLightType == "Slow strobe") {llSetTimerEvent(2.0);}
+			else if (gLightType == "Fast strobe") {llSetTimerEvent(0.5);}
 		}
 
 		integer lightOn = TRUE;
@@ -68,7 +61,7 @@ updateLight()
 
 		if (lightOn)
 		{
-			lightBus("load " + gNS_DeviceName + " drainpower " + (string)llRound(gNS_PowerDrainWhenFullPower * gSelectedDevicePowerLevel));
+			lightBus("load " + gNS_DeviceName + " drainpower " + (string)llRound(gNS_PowerDrawWhenFullPower * gSelectedDevicePowerLevel));
 			llSetLinkPrimitiveParamsFast(LINK_THIS, [
 				PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenFullPower, PRIM_POINT_LIGHT, TRUE, gNS_Color, 1.0, (gLightRadiusWhenFullPower * gSelectedDevicePowerLevel), 0.0,
 				PRIM_PROJECTOR, gLightProjectorTexture, 1.3, 0.0, 0.0,
@@ -83,7 +76,7 @@ updateLight()
 	}
 	else
 	{
-		setTimerEvent2(0.0);
+		llSetTimerEvent(0.0);
 		gLastLightType = "";
 		switchOffLight();
 	}
@@ -113,7 +106,7 @@ toUser(key user, string message)
 
 stopListener()
 {
-	llSetTimerEvent(0);
+	setTimerEvent2(0);
 	llListenRemove(gListenHandle);
 }
 
@@ -166,13 +159,13 @@ default
 
 	timer()
 	{
-		stopListener();
+		gStrobeSwitch = !gStrobeSwitch;
+		updateLight();
 	}
 
 	no_sensor()
 	{
-		gStrobeSwitch = !gStrobeSwitch;
-		updateLight();
+		stopListener();
 	}
 
 	listen(integer channel, string name, key id, string message)
@@ -183,6 +176,7 @@ default
 
 			if (channel == gDialogChannel)
 			{
+
 				stopListener();
 				if (!gNS_DeviceRegistered)
 				{
@@ -191,7 +185,7 @@ default
 				else if (gNS_SystemPowerLevel > 0)
 				{
 					toUser(id, "[" + gNS_DeviceName + "] " + message);
-					if (message == "Enabled")
+					if (message == "ENABLED")
 					{
 						gDeviceIsEnabled = TRUE;
 						if (gSelectedDevicePowerLevel == 0.0)
@@ -199,7 +193,7 @@ default
 							gSelectedDevicePowerLevel = 1.0;
 						}
 					}
-					else if (message == "Disabled") {gDeviceIsEnabled = FALSE;}
+					else if (message == "DISABLED") {gDeviceIsEnabled = FALSE;}
 					else if (message == "Power: 25%") {gSelectedDevicePowerLevel = 0.25;}
 					else if (message == "Power: 50%") {gSelectedDevicePowerLevel = 0.5;}
 					else if (message == "Power: 100%") {gSelectedDevicePowerLevel = 1.0;}
@@ -212,6 +206,12 @@ default
 				{
 					toUser(id, "Not enough power to operate '" + gNS_DeviceName + "'.");
 				}
+
+				if (gNS_SoundVolume > 0 && gNS_SoundSample != "")
+				{
+					llPlaySound(gNS_SoundSample, gNS_SoundVolume);
+				}
+
 				return;
 			}
 
@@ -263,7 +263,7 @@ default
 				lightBus("icon " + gNS_IconTexture);
 				lightBus("connected " + gNS_DeviceName);
 				lightBus("power-q");
-				lightBus("conf-get " + gNS_DeviceName + ".type\n" + gNS_DeviceName + ".power");
+				lightBus("conf-get interface.sound.act\ninterface.sound.volume\n" + gNS_DeviceName + ".type\n" + gNS_DeviceName + ".power");
 				if (gAllowDynamicColorSwapping)
 				{
 					lightBus("color-q");
@@ -300,14 +300,10 @@ default
 					string confValue = llStringTrim(llGetSubString(currentRow, llSubStringIndex(currentRow, " "), -1), STRING_TRIM);
 					if (confValue != "﷐" && llStringLength(confValue) > 0)
 					{
-						if (confName == gNS_DeviceName + ".type")
-						{
-							gLightType = confValue;
-						}
-						else if (confName == gNS_DeviceName + ".power")
-						{
-							gSelectedDevicePowerLevel = (float)confValue;
-						}
+						if (confName == "interface.sound.act") {gNS_SoundSample = confValue;}
+						else if (confName == "interface.sound.volume") {gNS_SoundVolume = (float)confValue;}
+						else if (confName == gNS_DeviceName + ".type") {gLightType = confValue;}
+						else if (confName == gNS_DeviceName + ".power") {gSelectedDevicePowerLevel = (float)confValue;}
 					}
 					++i;
 				}
@@ -328,7 +324,7 @@ default
 					toUser(answerTo,
 						"\n========\n'" + gNS_DeviceName + "' module status:" +
 						"\nCurrently enabled: " + llList2String(["NO", "YES"], gDeviceIsEnabled) +
-						"\nPower drain: " + (string)llRound(gDeviceIsEnabled * gNS_PowerDrainWhenFullPower * gSelectedDevicePowerLevel) + " W / " + (string)gNS_PowerDrainWhenFullPower + " W (" + (string)llRound(gDeviceIsEnabled * gSelectedDevicePowerLevel * 100) + "%)" +
+						"\nPower draw: " + (string)llRound(gDeviceIsEnabled * gNS_PowerDrawWhenFullPower * gSelectedDevicePowerLevel) + " W / " + (string)gNS_PowerDrawWhenFullPower + " W (" + (string)llRound(gDeviceIsEnabled * gSelectedDevicePowerLevel * 100) + "%)" +
 						"\nLight type: " + gLightType +
 						"\nLight color: " + (string)gNS_Color +
 						"\nFirmware version: " + gVersion + "\n========"
@@ -337,8 +333,8 @@ default
 				else
 				{
 					gListenHandle = llListen(gDialogChannel, "", answerTo, "");
-					llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.", ["Power: 100%", "Power: 50%", "Power: 25%", "Solid", "Slow strobe", "Fast strobe", "Disabled", "Enabled"], gDialogChannel);
-					llSetTimerEvent(60);
+					llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.", ["Power: 100%", "Power: 50%", "Power: 25%", "Solid", "Slow strobe", "Fast strobe", "DISABLED", "ENABLED"], gDialogChannel);
+					setTimerEvent2(60);
 				}
 			}
 
