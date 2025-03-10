@@ -6,7 +6,7 @@
 // While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
 // All trademarks and product names belong to their respective owners.
 
-string gVersion = "1.1.7";
+string gVersion = "1.1.8";
 
 // Device configuration below, feel free to play with these
 
@@ -36,7 +36,7 @@ integer gDialogChannel;
 integer gListenHandle;
 key gOwner;
 
-integer gNS_DeviceRegistered;
+key gNS_DeviceRegisteredWith;
 integer gNS_LightBusChannel;
 integer gNS_SystemPowerChargePresent = -1;
 float gNS_SoundVolume;
@@ -46,7 +46,7 @@ string gNS_SoundSample;
 
 updateLight()
 {
-	if (gNS_LastSystemState == "on" && gNS_DeviceRegistered && gDeviceIsEnabled && gSelectedDevicePowerLevel > 0 && gNS_SystemPowerLevel > 0)
+	if (gNS_LastSystemState == "on" && gNS_DeviceRegisteredWith != "" && gDeviceIsEnabled && gSelectedDevicePowerLevel > 0 && gNS_SystemPowerLevel > 0)
 	{
 
 		if (gLightType != gLastLightType)
@@ -88,7 +88,7 @@ updateLight()
 
 switchOffLight()
 {
-	if (gNS_DeviceRegistered)
+	if (gNS_DeviceRegisteredWith != "")
 	{
 		lightBus("load " + gNS_DeviceName + " drainpower 0");
 	}
@@ -100,7 +100,12 @@ switchOffLight()
 
 lightBus(string message)
 {
-	llRegionSayTo(gOwner, gNS_LightBusChannel, message);
+	key sendTo = gNS_DeviceRegisteredWith;
+	if (sendTo == "")
+	{
+		sendTo = gOwner;
+	}
+	llRegionSayTo(sendTo, gNS_LightBusChannel, message);
 }
 
 toUser(key user, string message)
@@ -165,7 +170,7 @@ default
 	{
 		if (NULL_KEY)
 		{
-			if (gNS_DeviceRegistered)
+			if (gNS_DeviceRegisteredWith != "")
 			{
 				lightBus("load " + gNS_DeviceName + " drainpower 0");
 				lightBus("remove " + gNS_DeviceName);
@@ -186,12 +191,11 @@ default
 
 	listen(integer channel, string name, key id, string message)
 	{
-		id = llGetOwnerKey(id);
 		if (channel == gDialogChannel)
 		{
 
 			stopListener();
-			if (!gNS_DeviceRegistered || message == "[CANCEL]")
+			if (gNS_DeviceRegisteredWith == "" || message == "[CANCEL]")
 			{
 				return;
 			}
@@ -201,6 +205,7 @@ default
 				llPlaySound(gNS_SoundSample, gNS_SoundVolume);
 			}
 
+			id = llGetOwnerKey(id);
 			if (gNS_SystemPowerLevel > 0)
 			{
 				toUser(id, "[" + gNS_DeviceName + "] " + message);
@@ -228,7 +233,7 @@ default
 			}
 
 		}
-		else if (id == gOwner)
+		else if (llGetOwnerKey(id) == gOwner)
 		{
 			list commandParts = llParseStringKeepNulls(message, [" "], []);
 			string command = llList2String(commandParts, 0);
@@ -272,7 +277,7 @@ default
 			}
 			else if (command == "add-confirm")
 			{
-				gNS_DeviceRegistered = TRUE;
+				gNS_DeviceRegisteredWith = id;
 				updateLight();
 				lightBus("icon " + gNS_IconTexture);
 				lightBus("connected " + gNS_DeviceName);
@@ -285,14 +290,14 @@ default
 			}
 			else if (command == "add-fail" || command == "remove" || command == "remove-confirm")
 			{
-				gNS_DeviceRegistered = FALSE;
+				gNS_DeviceRegisteredWith = "";
 				gDeviceIsEnabled = FALSE;
 				lightBus("disconnected " + gNS_DeviceName);
 				updateLight();
 			}
 			else if (command == "probe")
 			{
-				gNS_DeviceRegistered = FALSE;
+				gNS_DeviceRegisteredWith = "";
 				lightBus("add " + gNS_DeviceName + " " + gVersion);
 			}
 			else if (command == "color")
@@ -329,7 +334,7 @@ default
 			else if (command == "peek" || command == "poke")
 			{
 				key answerTo = llList2Key(commandParts, 1);
-				if (gNS_LastSystemState != "on" || !gNS_DeviceRegistered)
+				if (gNS_LastSystemState != "on" || gNS_DeviceRegisteredWith == "")
 				{
 					toUser(answerTo, "No power supplied, cannot access '" + gNS_DeviceName + "'");
 				}
