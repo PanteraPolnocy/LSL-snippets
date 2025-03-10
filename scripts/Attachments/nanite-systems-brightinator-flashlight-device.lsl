@@ -2,7 +2,7 @@
 // Tested with ARES 0.5.3 / NS-112 AIDE
 // Written by PanteraPolnocy
 
-string gVersion = "1.1.5";
+string gVersion = "1.1.6";
 
 // Device configuration below, feel free to play with these
 
@@ -104,6 +104,18 @@ toUser(key user, string message)
 	llRegionSayTo(user, 0, message);
 }
 
+string getPowerDraw()
+{
+	return (string)llRound(gDeviceIsEnabled * gNS_PowerDrawWhenFullPower * gSelectedDevicePowerLevel) + " W / " + (string)gNS_PowerDrawWhenFullPower + " W (" + (string)llRound(gDeviceIsEnabled * gSelectedDevicePowerLevel * 100) + "%)";
+}
+
+openDialogMenu(key answerTo)
+{
+	gListenHandle = llListen(gDialogChannel, "", answerTo, "");
+	llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.\n Enabled: " + llList2String(["NO", "YES"], gDeviceIsEnabled) + " | " + getPowerDraw() + " | " + gLightType, ["Power: 100%", "Power: 50%", "Power: 25%", "Solid", "Slow strobe", "Fast strobe", "DISABLED", "ENABLED", "[CANCEL]"], gDialogChannel);
+	setTimerEvent2(60);
+}
+
 stopListener()
 {
 	setTimerEvent2(0);
@@ -175,11 +187,17 @@ default
 		{
 
 			stopListener();
-			if (!gNS_DeviceRegistered)
+			if (!gNS_DeviceRegistered || message == "[CANCEL]")
 			{
 				return;
 			}
-			else if (gNS_SystemPowerLevel > 0)
+
+			if (gNS_SoundVolume > 0 && gNS_SoundSample != "")
+			{
+				llPlaySound(gNS_SoundSample, gNS_SoundVolume);
+			}
+
+			if (gNS_SystemPowerLevel > 0)
 			{
 				toUser(id, "[" + gNS_DeviceName + "] " + message);
 				if (message == "ENABLED")
@@ -198,15 +216,11 @@ default
 				// --- Does not seem to be present in ARES yet: '[_hardware] unimplemented: conf-set'
 				// lightBus("conf-set " + gNS_DeviceName + ".type " + gLightType + "\n" + gNS_DeviceName + ".power " + (string)gSelectedDevicePowerLevel);
 				updateLight();
+				openDialogMenu(id);
 			}
 			else
 			{
 				toUser(id, "Not enough power to operate '" + gNS_DeviceName + "'.");
-			}
-
-			if (gNS_SoundVolume > 0 && gNS_SoundSample != "")
-			{
-				llPlaySound(gNS_SoundSample, gNS_SoundVolume);
 			}
 
 		}
@@ -320,7 +334,7 @@ default
 					toUser(answerTo,
 						"\n========\n'" + gNS_DeviceName + "' module status:" +
 						"\nCurrently enabled: " + llList2String(["NO", "YES"], gDeviceIsEnabled) +
-						"\nPower draw: " + (string)llRound(gDeviceIsEnabled * gNS_PowerDrawWhenFullPower * gSelectedDevicePowerLevel) + " W / " + (string)gNS_PowerDrawWhenFullPower + " W (" + (string)llRound(gDeviceIsEnabled * gSelectedDevicePowerLevel * 100) + "%)" +
+						"\nPower draw: " + getPowerDraw() +
 						"\nLight type: " + gLightType +
 						"\nLight color: " + (string)gNS_Color +
 						"\nFirmware version: " + gVersion + "\n========"
@@ -328,9 +342,7 @@ default
 				}
 				else
 				{
-					gListenHandle = llListen(gDialogChannel, "", answerTo, "");
-					llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.", ["Power: 100%", "Power: 50%", "Power: 25%", "Solid", "Slow strobe", "Fast strobe", "DISABLED", "ENABLED"], gDialogChannel);
-					setTimerEvent2(60);
+					openDialogMenu(answerTo);
 				}
 			}
 		}
