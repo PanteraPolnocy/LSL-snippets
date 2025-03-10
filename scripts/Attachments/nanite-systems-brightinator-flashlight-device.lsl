@@ -2,7 +2,7 @@
 // Tested with ARES 0.5.3 / NS-112 AIDE
 // Written by PanteraPolnocy
 
-string gVersion = "1.1.1";
+string gVersion = "1.1.2";
 
 // Device configuration below, feel free to play with these
 
@@ -24,6 +24,8 @@ vector gNS_Color = ZERO_VECTOR; // Light color; if ZERO_VECTOR here, ask Nanite 
 string gLightType = "Solid";
 string gLastLightType;
 integer gStrobeSwitch;
+integer gAllowDynamicColorSwapping;
+
 float gSelectedDevicePowerLevel;
 integer gDeviceIsEnabled;
 integer gDialogChannel;
@@ -137,6 +139,10 @@ default
 		gOwner = llGetOwner();
 		gDialogChannel = (integer)(llFrand(-10000000)-10000000);
 		gNS_LightBusChannel = 105 - (integer)("0x" + llGetSubString(gOwner, 29, 35));
+		if (gNS_Color == ZERO_VECTOR)
+		{
+			gAllowDynamicColorSwapping = TRUE;
+		}
 		llListen(gNS_LightBusChannel, "", NULL_KEY, "");
 		lightBus("add " + gNS_DeviceName + " " + gVersion);
 	}
@@ -256,9 +262,12 @@ default
 				updateLight();
 				lightBus("icon " + gNS_IconTexture);
 				lightBus("connected " + gNS_DeviceName);
-				lightBus("color-q");
 				lightBus("power-q");
 				lightBus("conf-get " + gNS_DeviceName + ".type\n" + gNS_DeviceName + ".power");
+				if (gAllowDynamicColorSwapping)
+				{
+					lightBus("color-q");
+				}
 			}
 			else if (command == "add-fail" || command == "remove" || command == "remove-confirm")
 			{
@@ -274,7 +283,7 @@ default
 			}
 			else if (command == "color")
 			{
-				if (gNS_Color == ZERO_VECTOR)
+				if (gAllowDynamicColorSwapping)
 				{
 					gNS_Color = <llList2Float(commandParts, 1), llList2Float(commandParts, 2), llList2Float(commandParts, 3)>;
 				}
@@ -313,7 +322,6 @@ default
 				if (gNS_LastSystemState != "on" || !gNS_DeviceRegistered)
 				{
 					toUser(answerTo, "No power supplied, cannot access '" + gNS_DeviceName + "'");
-					return;
 				}
 				else if (command == "peek")
 				{
