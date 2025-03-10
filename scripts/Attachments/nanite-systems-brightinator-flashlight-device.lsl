@@ -6,7 +6,7 @@
 // While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
 // All trademarks and product names belong to their respective owners.
 
-string gVersion = "1.2.0";
+string gVersion = "1.2.1";
 
 // Device configuration below, feel free to play with these
 
@@ -213,7 +213,11 @@ default
 			id = llGetOwnerKey(id);
 			if (gNS_SystemPowerLevel > 0)
 			{
-				toUser(id, "[" + gNS_DeviceName + "] " + message);
+
+				if (message != "")
+				{
+				`	toUser(id, "[" + gNS_DeviceName + "] " + message);
+				}
 
 				if (!gIsInCustomTextureMode && message == "Img: Custom")
 				{
@@ -264,6 +268,7 @@ default
 				// lightBus("conf-set " + gNS_DeviceName + ".type " + gLightType + "\n" + gNS_DeviceName + ".power " + (string)gSelectedDevicePowerLevel + "\n" + gNS_DeviceName + ".texture " + gLightProjectorCurrentTexture);
 				updateLight();
 				openDialogMenu(id);
+
 			}
 			else
 			{
@@ -316,7 +321,6 @@ default
 			else if (command == "add-confirm")
 			{
 				gNS_DeviceRegisteredWith = id;
-				updateLight();
 				lightBus("icon " + gNS_IconTexture);
 				lightBus("connected " + gNS_DeviceName);
 				lightBus("power-q");
@@ -324,6 +328,10 @@ default
 				if (gAllowDynamicColorSwapping)
 				{
 					lightBus("color-q");
+				}
+				else
+				{
+					updateLight();
 				}
 			}
 			else if (command == "add-fail" || command == "remove" || command == "remove-confirm")
@@ -343,6 +351,7 @@ default
 				if (gAllowDynamicColorSwapping)
 				{
 					gNS_Color = <llList2Float(commandParts, 1), llList2Float(commandParts, 2), llList2Float(commandParts, 3)>;
+					updateLight();
 				}
 			}
 			else if (command == "conf")
