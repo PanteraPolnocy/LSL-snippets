@@ -6,7 +6,7 @@
 // While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
 // All trademarks and product names belong to their respective owners.
 
-string gVersion = "1.1.8";
+string gVersion = "1.1.9";
 
 // Device configuration below, feel free to play with these
 
@@ -36,7 +36,7 @@ integer gDialogChannel;
 integer gListenHandle;
 key gOwner;
 
-key gNS_DeviceRegisteredWith;
+key gNS_DeviceRegisteredWith = NULL_KEY;
 integer gNS_LightBusChannel;
 integer gNS_SystemPowerChargePresent = -1;
 float gNS_SoundVolume;
@@ -46,7 +46,7 @@ string gNS_SoundSample;
 
 updateLight()
 {
-	if (gNS_LastSystemState == "on" && gNS_DeviceRegisteredWith != "" && gDeviceIsEnabled && gSelectedDevicePowerLevel > 0 && gNS_SystemPowerLevel > 0)
+	if (gNS_LastSystemState == "on" && gNS_DeviceRegisteredWith != NULL_KEY && gDeviceIsEnabled && gSelectedDevicePowerLevel > 0 && gNS_SystemPowerLevel > 0)
 	{
 
 		if (gLightType != gLastLightType)
@@ -88,7 +88,7 @@ updateLight()
 
 switchOffLight()
 {
-	if (gNS_DeviceRegisteredWith != "")
+	if (gNS_DeviceRegisteredWith != NULL_KEY)
 	{
 		lightBus("load " + gNS_DeviceName + " drainpower 0");
 	}
@@ -101,7 +101,7 @@ switchOffLight()
 lightBus(string message)
 {
 	key sendTo = gNS_DeviceRegisteredWith;
-	if (sendTo == "")
+	if (sendTo == NULL_KEY)
 	{
 		sendTo = gOwner;
 	}
@@ -170,7 +170,7 @@ default
 	{
 		if (NULL_KEY)
 		{
-			if (gNS_DeviceRegisteredWith != "")
+			if (gNS_DeviceRegisteredWith != NULL_KEY)
 			{
 				lightBus("load " + gNS_DeviceName + " drainpower 0");
 				lightBus("remove " + gNS_DeviceName);
@@ -195,7 +195,7 @@ default
 		{
 
 			stopListener();
-			if (gNS_DeviceRegisteredWith == "" || message == "[CANCEL]")
+			if (gNS_DeviceRegisteredWith == NULL_KEY || message == "[CANCEL]")
 			{
 				return;
 			}
@@ -290,14 +290,14 @@ default
 			}
 			else if (command == "add-fail" || command == "remove" || command == "remove-confirm")
 			{
-				gNS_DeviceRegisteredWith = "";
+				gNS_DeviceRegisteredWith = NULL_KEY;
 				gDeviceIsEnabled = FALSE;
 				lightBus("disconnected " + gNS_DeviceName);
 				updateLight();
 			}
 			else if (command == "probe")
 			{
-				gNS_DeviceRegisteredWith = "";
+				gNS_DeviceRegisteredWith = NULL_KEY;
 				lightBus("add " + gNS_DeviceName + " " + gVersion);
 			}
 			else if (command == "color")
@@ -334,7 +334,7 @@ default
 			else if (command == "peek" || command == "poke")
 			{
 				key answerTo = llList2Key(commandParts, 1);
-				if (gNS_LastSystemState != "on" || gNS_DeviceRegisteredWith == "")
+				if (gNS_LastSystemState != "on" || gNS_DeviceRegisteredWith == NULL_KEY)
 				{
 					toUser(answerTo, "No power supplied, cannot access '" + gNS_DeviceName + "'");
 				}
