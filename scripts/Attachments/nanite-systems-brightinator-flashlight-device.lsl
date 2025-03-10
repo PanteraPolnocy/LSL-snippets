@@ -2,7 +2,7 @@
 // Tested with ARES 0.5.3 / NS-112 AIDE
 // Written by PanteraPolnocy
 
-string gVersion = "1.1.3";
+string gVersion = "1.1.4";
 
 // Device configuration below, feel free to play with these
 
@@ -170,54 +170,53 @@ default
 
 	listen(integer channel, string name, key id, string message)
 	{
+
+		if (channel == gDialogChannel)
+		{
+
+			stopListener();
+			if (!gNS_DeviceRegistered)
+			{
+				return;
+			}
+			else if (gNS_SystemPowerLevel > 0)
+			{
+				toUser(id, "[" + gNS_DeviceName + "] " + message);
+				if (message == "ENABLED")
+				{
+					gDeviceIsEnabled = TRUE;
+					if (gSelectedDevicePowerLevel == 0.0)
+					{
+						gSelectedDevicePowerLevel = 1.0;
+					}
+				}
+				else if (message == "DISABLED") {gDeviceIsEnabled = FALSE;}
+				else if (message == "Power: 25%") {gSelectedDevicePowerLevel = 0.25;}
+				else if (message == "Power: 50%") {gSelectedDevicePowerLevel = 0.5;}
+				else if (message == "Power: 100%") {gSelectedDevicePowerLevel = 1.0;}
+				else if (message == "Solid" || message == "Slow strobe" || message == "Fast strobe") {gLightType = message;}
+				// --- Does not seem to be present in ARES yet: '[_hardware] unimplemented: conf-set'
+				// lightBus("conf-set " + gNS_DeviceName + ".type " + gLightType + "\n" + gNS_DeviceName + ".power " + (string)gSelectedDevicePowerLevel);
+				updateLight();
+			}
+			else
+			{
+				toUser(id, "Not enough power to operate '" + gNS_DeviceName + "'.");
+			}
+
+			if (gNS_SoundVolume > 0 && gNS_SoundSample != "")
+			{
+				llPlaySound(gNS_SoundSample, gNS_SoundVolume);
+			}
+
+			return;
+		}
+
 		id = llGetOwnerKey(id);
 		if (id == gOwner)
 		{
-
-			if (channel == gDialogChannel)
-			{
-
-				stopListener();
-				if (!gNS_DeviceRegistered)
-				{
-					return;
-				}
-				else if (gNS_SystemPowerLevel > 0)
-				{
-					toUser(id, "[" + gNS_DeviceName + "] " + message);
-					if (message == "ENABLED")
-					{
-						gDeviceIsEnabled = TRUE;
-						if (gSelectedDevicePowerLevel == 0.0)
-						{
-							gSelectedDevicePowerLevel = 1.0;
-						}
-					}
-					else if (message == "DISABLED") {gDeviceIsEnabled = FALSE;}
-					else if (message == "Power: 25%") {gSelectedDevicePowerLevel = 0.25;}
-					else if (message == "Power: 50%") {gSelectedDevicePowerLevel = 0.5;}
-					else if (message == "Power: 100%") {gSelectedDevicePowerLevel = 1.0;}
-					else if (message == "Solid" || message == "Slow strobe" || message == "Fast strobe") {gLightType = message;}
-					// --- Does not seem to be present in ARES yet: '[_hardware] unimplemented: conf-set'
-					// lightBus("conf-set " + gNS_DeviceName + ".type " + gLightType + "\n" + gNS_DeviceName + ".power " + (string)gSelectedDevicePowerLevel);
-					updateLight();
-				}
-				else
-				{
-					toUser(id, "Not enough power to operate '" + gNS_DeviceName + "'.");
-				}
-
-				if (gNS_SoundVolume > 0 && gNS_SoundSample != "")
-				{
-					llPlaySound(gNS_SoundSample, gNS_SoundVolume);
-				}
-
-				return;
-			}
-
 			list commandParts = llParseStringKeepNulls(message, [" "], []);
 			string command = llList2String(commandParts, 0);
-
 			if (command == "power")
 			{
 				gNS_SystemPowerLevel = llList2Float(commandParts, 1);
@@ -337,8 +336,8 @@ default
 					setTimerEvent2(60);
 				}
 			}
-
 		}
+
 	}
 
 }
