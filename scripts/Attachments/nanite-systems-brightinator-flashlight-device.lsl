@@ -241,11 +241,11 @@ default
 						if (checkKey)
 						{
 							gLightProjectorCurrentTexture = message;
-							toUser(id, "Texture set.");
+							toUser(id, "Image set.");
 						}
 						else
 						{
-							toUser(id, "The provided string does not seem to be a valid texture. Try again.");
+							toUser(id, "The provided string does not seem to be a valid UUID. Try again.");
 						}
 					}
 					else
@@ -409,7 +409,7 @@ default
 					key answerTo = llList2Key(commandParts, 1);
 					if (gNS_LastSystemState != "on" || gNS_DeviceRegisteredWith == NULL_KEY)
 					{
-						toUser(answerTo, "No power supplied, cannot access the device.'");
+						toUser(answerTo, "No power supplied, cannot access the device.");
 					}
 					else
 					{
