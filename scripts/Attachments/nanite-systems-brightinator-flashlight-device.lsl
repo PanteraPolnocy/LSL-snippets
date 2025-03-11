@@ -131,6 +131,7 @@ playSound()
 
 openDialogMenu(key answerTo)
 {
+	gIsInCustomTextureMode = FALSE;
 	gListenHandle = llListen(gDialogChannel, "", answerTo, "");
 	llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.\n Enabled: " + llList2String(["NO", "YES"], gDeviceIsEnabled) + " | " + getPowerDraw() + " | " + gLightType, ["Power: 100%", "Power: 50%", "Power: 25%", "Solid", "Slow strobe", "Fast strobe", "Img: Custom", "Img: Default", "[CANCEL]", "DISABLED", "ENABLED"], gDialogChannel);
 	setTimerEvent2(60);
