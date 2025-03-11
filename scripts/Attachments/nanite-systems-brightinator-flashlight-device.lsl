@@ -6,7 +6,7 @@
 // While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
 // All trademarks and product names belong to their respective owners.
 
-string gVersion = "1.2.2";
+string gVersion = "1.2.3";
 
 // Device configuration below, feel free to play with these
 
@@ -198,6 +198,7 @@ default
 
 	no_sensor()
 	{
+		gIsInCustomTextureMode = FALSE;
 		stopListener();
 	}
 
@@ -250,7 +251,7 @@ default
 					}
 					else
 					{
-						toUser(id, "Empty string provided. Image has been reset to the default value.");
+						toUser(id, "Empty string provided. Ignoring.");
 					}
 				}
 
@@ -261,6 +262,11 @@ default
 				else if (message == "Power: 100%") {gSelectedDevicePowerLevel = 1.0;}
 				else if (message == "Solid" || message == "Slow strobe" || message == "Fast strobe") {gLightType = message;}
 				else if (message == "Img: Default") {gLightProjectorCurrentTexture = gLightProjectorDefaultTexture;}
+				else
+				{
+					toUser(id, "Command not recognised. Aborting.");
+					return;
+				}
 
 				// --- Does not seem to be present in ARES yet: '[_hardware] unimplemented: conf-set'
 				// lightBus("conf-set " + gNS_DeviceName + ".type " + gLightType + "\n" + gNS_DeviceName + ".power " + (string)gSelectedDevicePowerLevel + "\n" + gNS_DeviceName + ".texture " + gLightProjectorCurrentTexture);
