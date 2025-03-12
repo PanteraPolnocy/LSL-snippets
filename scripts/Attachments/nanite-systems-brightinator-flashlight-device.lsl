@@ -6,7 +6,7 @@
 // While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
 // All trademarks and product names belong to their respective owners.
 
-string gVersion = "1.2.5";
+string gVersion = "1.2.6";
 
 // Device configuration below, feel free to play with these
 
@@ -24,7 +24,7 @@ string gNS_DeviceName = "brightinator"; // One-word mnemonic
 string gNS_CustomToogleCommand = "toglight"; // @command to switch the light on/off
 string gNS_IconTexture = "ea574d21-e7f9-7c65-8b30-b1edc0909633"; // Texture UUID; Visible in ARES HUD
 integer gNS_PowerDrawWhenFullPower = 60; // In Watts
-vector gNS_Color = ZERO_VECTOR; // Light color; if ZERO_VECTOR here, ask Nanite OS for primary color; If not ZERO_VECTOR, use this value instead
+vector gNS_Color = ZERO_VECTOR; // Light and prim color; if ZERO_VECTOR here, ask Nanite OS for primary color; If not ZERO_VECTOR, use this value instead
 
 // Internal variables below, filled in runtime
 // DO NOT MODIFY
@@ -73,11 +73,12 @@ updateLight()
 		{
 			lightBus("load " + gNS_DeviceName + " drainpower " + (string)llRound(gNS_PowerDrawWhenFullPower * gSelectedDevicePowerLevel));
 			llSetLinkPrimitiveParamsFast(LINK_THIS, [
-				PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenEnabled, PRIM_POINT_LIGHT, TRUE, gNS_Color, 1.0, (gLightRadiusWhenFullPower * gSelectedDevicePowerLevel), 0.0,
-				PRIM_PROJECTOR, gLightProjectorCurrentTexture, 1.3, 0.0, 0.0,
-				PRIM_GLOW, ALL_SIDES, (gGlowWhenFullPower * gSelectedDevicePowerLevel)
+				PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenEnabled,
+				PRIM_POINT_LIGHT, TRUE, gNS_Color, 1.0, (gLightRadiusWhenFullPower * gSelectedDevicePowerLevel), 0.0,
+				PRIM_COLOR, ALL_SIDES, gNS_Color, gOpacityWhenEnabled,
+				PRIM_GLOW, ALL_SIDES, (gGlowWhenFullPower * gSelectedDevicePowerLevel),
+				PRIM_PROJECTOR, gLightProjectorCurrentTexture, 1.3, 0.0, 0.0
 			]);
-			llSetLinkAlpha(LINK_THIS, gOpacityWhenEnabled, ALL_SIDES);
 		}
 		else
 		{
@@ -100,10 +101,11 @@ switchOffLight()
 		lightBus("load " + gNS_DeviceName + " drainpower 0");
 	}
 	llSetLinkPrimitiveParamsFast(LINK_THIS, [
-		PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenDisabled, PRIM_POINT_LIGHT, FALSE, ZERO_VECTOR, 0.0, 0.0, 0.0,
+		PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenDisabled,
+		PRIM_POINT_LIGHT, FALSE, ZERO_VECTOR, 0.0, 0.0, 0.0,
+		PRIM_COLOR, ALL_SIDES, gNS_Color, gOpacityWhenDisabled,
 		PRIM_GLOW, ALL_SIDES, gGlowWhenDisabled
 	]);
-	llSetLinkAlpha(LINK_THIS, gOpacityWhenDisabled, ALL_SIDES);
 }
 
 lightBus(string message)
