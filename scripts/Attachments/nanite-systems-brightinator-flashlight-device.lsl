@@ -6,7 +6,7 @@
 // While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
 // All trademarks and product names belong to their respective owners.
 
-string gVersion = "1.2.8";
+string gVersion = "1.2.9";
 
 // Device configuration below, feel free to play with these
 
@@ -180,7 +180,7 @@ default
 		}
 		llListen(gNS_LightBusChannel, "", NULL_KEY, "");
 		lightBus("add " + gNS_DeviceName + " " + gVersion);
-		if (!llGetAttached())
+		if (llGetAttached())
 		{
 			llRequestPermissions(gOwner, PERMISSION_TAKE_CONTROLS);
 		}
