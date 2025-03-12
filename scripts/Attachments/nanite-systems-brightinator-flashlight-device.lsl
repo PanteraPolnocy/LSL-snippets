@@ -6,11 +6,12 @@
 // While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
 // All trademarks and product names belong to their respective owners.
 
-string gVersion = "1.2.6";
+string gVersion = "1.2.7";
 
 // Device configuration below, feel free to play with these
 
 string gLightProjectorDefaultTexture = "b2877a04-54e8-46c6-214e-65ad6ed0ef37"; // NULL_KEY or texture UUID
+integer gAffectedFaces = ALL_SIDES; // Which faces to modify in the current link - for full bright, prim color and glow
 integer gFullBrightWhenEnabled = TRUE; // TRUE / FALSE
 integer gFullBrightWhenDisabled = FALSE; // TRUE / FALSE
 float gOpacityWhenEnabled = 1.0; // 0.0 - 1.0
@@ -40,7 +41,7 @@ integer gDeviceIsEnabled;
 integer gDialogChannel;
 integer gListenHandle;
 integer gIsInCustomTextureMode;
-key gOwner;
+key gOwner = NULL_KEY;
 
 key gNS_DeviceRegisteredWith = NULL_KEY;
 integer gNS_LightBusChannel;
@@ -73,10 +74,10 @@ updateLight()
 		{
 			lightBus("load " + gNS_DeviceName + " drainpower " + (string)llRound(gNS_PowerDrawWhenFullPower * gSelectedDevicePowerLevel));
 			llSetLinkPrimitiveParamsFast(LINK_THIS, [
-				PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenEnabled,
+				PRIM_FULLBRIGHT, gAffectedFaces, gFullBrightWhenEnabled,
 				PRIM_POINT_LIGHT, TRUE, gNS_Color, 1.0, (gLightRadiusWhenFullPower * gSelectedDevicePowerLevel), 0.0,
-				PRIM_COLOR, ALL_SIDES, gNS_Color, gOpacityWhenEnabled,
-				PRIM_GLOW, ALL_SIDES, (gGlowWhenFullPower * gSelectedDevicePowerLevel),
+				PRIM_COLOR, gAffectedFaces, gNS_Color, gOpacityWhenEnabled,
+				PRIM_GLOW, gAffectedFaces, (gGlowWhenFullPower * gSelectedDevicePowerLevel),
 				PRIM_PROJECTOR, gLightProjectorCurrentTexture, 1.3, 0.0, 0.0
 			]);
 		}
@@ -101,10 +102,10 @@ switchOffLight()
 		lightBus("load " + gNS_DeviceName + " drainpower 0");
 	}
 	llSetLinkPrimitiveParamsFast(LINK_THIS, [
-		PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenDisabled,
+		PRIM_FULLBRIGHT, gAffectedFaces, gFullBrightWhenDisabled,
 		PRIM_POINT_LIGHT, FALSE, ZERO_VECTOR, 0.0, 0.0, 0.0,
-		PRIM_COLOR, ALL_SIDES, gNS_Color, gOpacityWhenDisabled,
-		PRIM_GLOW, ALL_SIDES, gGlowWhenDisabled
+		PRIM_COLOR, gAffectedFaces, gNS_Color, gOpacityWhenDisabled,
+		PRIM_GLOW, gAffectedFaces, gGlowWhenDisabled
 	]);
 }
 
@@ -141,7 +142,7 @@ openDialogMenu(key answerTo)
 	gIsInCustomTextureMode = FALSE;
 	gListenHandle = llListen(gDialogChannel, "", answerTo, "");
 	llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.\n Enabled: " + llList2String(["NO", "YES"], gDeviceIsEnabled) + " | " + getPowerDraw() + " | " + gLightType, ["Power: 100%", "Power: 50%", "Power: 25%", "Solid", "Slow strobe", "Fast strobe", "Img: Custom", "Img: Default", "[CANCEL]", "DISABLED", "ENABLED"], gDialogChannel);
-	setTimerEvent2(90);
+	setTimerEvent2(60);
 }
 
 stopListener()
@@ -208,7 +209,7 @@ default
 	{
 		gIsInCustomTextureMode = FALSE;
 		stopListener();
-		toUser(gOwner, "User interface session expired.");
+		toUser(gOwner, "User interface session expired (dialog menu timed out).");
 	}
 
 	listen(integer channel, string name, key id, string message)
