@@ -6,21 +6,24 @@
 // While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
 // All trademarks and product names belong to their respective owners.
 
-string gVersion = "1.2.3";
+string gVersion = "1.2.5";
 
 // Device configuration below, feel free to play with these
 
-integer gFullBrightWhenFullPower = TRUE; // TRUE / FALSE
+string gLightProjectorDefaultTexture = "b2877a04-54e8-46c6-214e-65ad6ed0ef37"; // NULL_KEY or texture UUID
+integer gFullBrightWhenEnabled = TRUE; // TRUE / FALSE
 integer gFullBrightWhenDisabled = FALSE; // TRUE / FALSE
+float gOpacityWhenEnabled = 1.0; // 0.0 - 1.0
+float gOpacityWhenDisabled = 0.0; // 0.0 - 1.0
+
 float gGlowWhenFullPower = 1.0; // 0.0 - 1.0
 float gGlowWhenDisabled = 0.0; // 0.0 - 1.0
 float gLightRadiusWhenFullPower = 15.0; // 0.1 - 20.0
-string gLightProjectorDefaultTexture = "b2877a04-54e8-46c6-214e-65ad6ed0ef37"; // NULL_KEY or texture UUID
 
 string gNS_DeviceName = "brightinator"; // One-word mnemonic
 string gNS_CustomToogleCommand = "toglight"; // @command to switch the light on/off
-integer gNS_PowerDrawWhenFullPower = 60; // In Watts
 string gNS_IconTexture = "ea574d21-e7f9-7c65-8b30-b1edc0909633"; // Texture UUID; Visible in ARES HUD
+integer gNS_PowerDrawWhenFullPower = 60; // In Watts
 vector gNS_Color = ZERO_VECTOR; // Light color; if ZERO_VECTOR here, ask Nanite OS for primary color; If not ZERO_VECTOR, use this value instead
 
 // Internal variables below, filled in runtime
@@ -70,10 +73,11 @@ updateLight()
 		{
 			lightBus("load " + gNS_DeviceName + " drainpower " + (string)llRound(gNS_PowerDrawWhenFullPower * gSelectedDevicePowerLevel));
 			llSetLinkPrimitiveParamsFast(LINK_THIS, [
-				PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenFullPower, PRIM_POINT_LIGHT, TRUE, gNS_Color, 1.0, (gLightRadiusWhenFullPower * gSelectedDevicePowerLevel), 0.0,
+				PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenEnabled, PRIM_POINT_LIGHT, TRUE, gNS_Color, 1.0, (gLightRadiusWhenFullPower * gSelectedDevicePowerLevel), 0.0,
 				PRIM_PROJECTOR, gLightProjectorCurrentTexture, 1.3, 0.0, 0.0,
 				PRIM_GLOW, ALL_SIDES, (gGlowWhenFullPower * gSelectedDevicePowerLevel)
 			]);
+			llSetLinkAlpha(LINK_THIS, gOpacityWhenEnabled, ALL_SIDES);
 		}
 		else
 		{
@@ -99,6 +103,7 @@ switchOffLight()
 		PRIM_FULLBRIGHT, ALL_SIDES, gFullBrightWhenDisabled, PRIM_POINT_LIGHT, FALSE, ZERO_VECTOR, 0.0, 0.0, 0.0,
 		PRIM_GLOW, ALL_SIDES, gGlowWhenDisabled
 	]);
+	llSetLinkAlpha(LINK_THIS, gOpacityWhenDisabled, ALL_SIDES);
 }
 
 lightBus(string message)
@@ -134,7 +139,7 @@ openDialogMenu(key answerTo)
 	gIsInCustomTextureMode = FALSE;
 	gListenHandle = llListen(gDialogChannel, "", answerTo, "");
 	llDialog(answerTo, "\n'" + gNS_DeviceName + "' module settings.\n Enabled: " + llList2String(["NO", "YES"], gDeviceIsEnabled) + " | " + getPowerDraw() + " | " + gLightType, ["Power: 100%", "Power: 50%", "Power: 25%", "Solid", "Slow strobe", "Fast strobe", "Img: Custom", "Img: Default", "[CANCEL]", "DISABLED", "ENABLED"], gDialogChannel);
-	setTimerEvent2(60);
+	setTimerEvent2(90);
 }
 
 stopListener()
@@ -201,6 +206,7 @@ default
 	{
 		gIsInCustomTextureMode = FALSE;
 		stopListener();
+		toUser(gOwner, "User interface session expired.");
 	}
 
 	listen(integer channel, string name, key id, string message)
@@ -243,11 +249,11 @@ default
 						if (checkKey)
 						{
 							gLightProjectorCurrentTexture = message;
-							toUser(id, "Image set.");
+							toUser(id, "Image parameter successfully updated.");
 						}
 						else
 						{
-							toUser(id, "The provided string does not seem to be a valid UUID. Try again.");
+							toUser(id, "Input validation failed: Invalid UUID format detected. Try again.");
 						}
 					}
 					else
@@ -265,7 +271,7 @@ default
 				else if (message == "Img: Default") {gLightProjectorCurrentTexture = gLightProjectorDefaultTexture;}
 				else
 				{
-					toUser(id, "Command not recognised. Aborting.");
+					toUser(id, "Error: Unrecognized command. Operation terminated.");
 					return;
 				}
 
@@ -277,7 +283,7 @@ default
 			}
 			else
 			{
-				toUser(id, "Not enough power to operate.");
+				toUser(id, "Insufficient power level. Unable to proceed.");
 			}
 
 		}
@@ -390,7 +396,7 @@ default
 				key answerTo = llList2Key(commandParts, 1);
 				if (gNS_LastSystemState != "on" || gNS_DeviceRegisteredWith == NULL_KEY)
 				{
-					toUser(answerTo, "No power supplied, cannot access the device.");
+					toUser(answerTo, "Power supply unavailable. Device access denied.");
 				}
 				else if (command == "peek")
 				{
@@ -416,7 +422,7 @@ default
 					key answerTo = llList2Key(commandParts, 1);
 					if (gNS_LastSystemState != "on" || gNS_DeviceRegisteredWith == NULL_KEY)
 					{
-						toUser(answerTo, "No power supplied, cannot access the device.");
+						toUser(answerTo, "Power supply unavailable. Device access denied.");
 					}
 					else
 					{
