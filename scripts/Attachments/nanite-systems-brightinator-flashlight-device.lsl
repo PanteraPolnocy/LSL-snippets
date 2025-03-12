@@ -1,12 +1,12 @@
 // Flashlight and light generator device, compatible with Nanite Systems' Light Bus protocol
-// Tested with ARES 0.5.3 / NS-112 AIDE (March 2025)
+// Tested with ARES 0.5.3 (beta 3) / NS-112 AIDE (March 2025)
 // Written by PanteraPolnocy
 
 // This project is an independent creation and is not officially affiliated with Nanite Systems.
 // While it is designed to interface with NS devices, it is neither produced nor endorsed by Nanite Systems.
 // All trademarks and product names belong to their respective owners.
 
-string gVersion = "1.2.7";
+string gVersion = "1.2.8";
 
 // Device configuration below, feel free to play with these
 
@@ -180,6 +180,10 @@ default
 		}
 		llListen(gNS_LightBusChannel, "", NULL_KEY, "");
 		lightBus("add " + gNS_DeviceName + " " + gVersion);
+		if (!llGetAttached())
+		{
+			llRequestPermissions(gOwner, PERMISSION_TAKE_CONTROLS);
+		}
 	}
 
 	on_rez(integer sp)
@@ -394,12 +398,22 @@ default
 			{
 				lightBus("icon " + gNS_IconTexture);
 			}
-			else if (command == "peek" || command == "poke")
+			else if (command == "command" || command == "peek" || command == "poke")
 			{
 				key answerTo = llList2Key(commandParts, 1);
 				if (gNS_LastSystemState != "on" || gNS_DeviceRegisteredWith == NULL_KEY)
 				{
 					toUser(answerTo, "Power supply unavailable. Device access denied.");
+				}
+				else if (command == "command")
+				{
+					if (llList2String(commandParts, 2) == gNS_CustomToogleCommand)
+					{
+						playSound();
+						gDeviceIsEnabled = !gDeviceIsEnabled;
+						toUser(answerTo, llList2String(["Disabled", "Enabled"], gDeviceIsEnabled));
+						updateLight();
+					}
 				}
 				else if (command == "peek")
 				{
@@ -418,24 +432,15 @@ default
 					openDialogMenu(answerTo);
 				}
 			}
-			else if (command == "command")
-			{
-				if (llList2String(commandParts, 2) == gNS_CustomToogleCommand)
-				{
-					key answerTo = llList2Key(commandParts, 1);
-					if (gNS_LastSystemState != "on" || gNS_DeviceRegisteredWith == NULL_KEY)
-					{
-						toUser(answerTo, "Power supply unavailable. Device access denied.");
-					}
-					else
-					{
-						playSound();
-						gDeviceIsEnabled = !gDeviceIsEnabled;
-						toUser(answerTo, llList2String(["Disabled", "Enabled"], gDeviceIsEnabled));
-						updateLight();
-					}
-				}
-			}
+		}
+	}
+
+	run_time_permissions(integer perm)
+	{
+		if (perm & PERMISSION_TAKE_CONTROLS)
+		{
+			// Take control for value that does nothing, in order to work in no-script places
+			llTakeControls(1024, TRUE, TRUE);
 		}
 	}
 
