@@ -308,19 +308,11 @@ default
 					updateLight();
 				}
 			}
-			else if (command == "on")
+			else if (command == "on" || command == "off")
 			{
-				if (gNS_LastSystemState != "on")
+				if (gNS_LastSystemState != command)
 				{
-					gNS_LastSystemState = "on";
-					updateLight();
-				}
-			}
-			else if (command == "off")
-			{
-				if (gNS_LastSystemState != "off")
-				{
-					gNS_LastSystemState = "off";
+					gNS_LastSystemState = command;
 					updateLight();
 				}
 			}
