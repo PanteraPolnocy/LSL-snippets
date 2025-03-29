@@ -42,6 +42,7 @@ default
 	listen(integer channel, string name, key id, string target)
 	{
 		stopListener();
+		target = llStringTrim(target, STRING_TRIM);
 		if ((key)target)
 		{
 
@@ -118,17 +119,22 @@ default
 					OBJECT_SCRIPT_TIME
 				]));
 
-				llOwnerSay("==== Combined HUDs resource usage [Scripts: " +
-					(string)((integer)llJsonGetValue(hudsProbe, [0]) - wornOBJECTRUNNINGSCRIPTCOUNT) + "/" +
-					(string)((integer)llJsonGetValue(hudsProbe, [1]) - wornOBJECTTOTALSCRIPTCOUNT) + ", " +
-					(string)(((integer)llJsonGetValue(hudsProbe, [2]) - wornOBJECTSCRIPTMEMORY) / 1024) + " KB, " +
-					(string)(((float)llJsonGetValue(hudsProbe, [3]) - wornOBJECTSCRIPTTIME) * 1000.0) + " ms]");
+				integer hudsOBJECTRUNNINGSCRIPTCOUNT = (integer)llJsonGetValue(hudsProbe, [0]);
+				integer hudsOBJECTTOTALSCRIPTCOUNT = (integer)llJsonGetValue(hudsProbe, [1]);
+				integer hudsOBJECTSCRIPTMEMORY = (integer)llJsonGetValue(hudsProbe, [2]);
+				float hudsOBJECTSCRIPTTIME = (float)llJsonGetValue(hudsProbe, [3]);
+
+				llOwnerSay("==== Combined calculated HUDs resource usage [Scripts: " +
+					(string)(hudsOBJECTRUNNINGSCRIPTCOUNT - wornOBJECTRUNNINGSCRIPTCOUNT) + "/" +
+					(string)(hudsOBJECTTOTALSCRIPTCOUNT - wornOBJECTTOTALSCRIPTCOUNT) + ", " +
+					(string)((hudsOBJECTSCRIPTMEMORY - wornOBJECTSCRIPTMEMORY) / 1024) + " KB, " +
+					(string)((hudsOBJECTSCRIPTTIME - wornOBJECTSCRIPTTIME) * 1000.0) + " ms]");
 
 				llOwnerSay("==== Total resource usage [Scripts: " +
-					(string)((integer)llJsonGetValue(hudsProbe, [0])) + "/" +
-					(string)((integer)llJsonGetValue(hudsProbe, [1])) + ", " +
-					(string)(((integer)llJsonGetValue(hudsProbe, [2])) / 1024) + " KB, " +
-					(string)(((float)llJsonGetValue(hudsProbe, [3])) * 1000.0) + " ms]");
+					(string)hudsOBJECTRUNNINGSCRIPTCOUNT + "/" +
+					(string)hudsOBJECTTOTALSCRIPTCOUNT + ", " +
+					(string)(hudsOBJECTSCRIPTMEMORY / 1024) + " KB, " +
+					(string)(hudsOBJECTSCRIPTTIME * 1000.0) + " ms]");
 
 				llOwnerSay("==== Scan finished.");
 
