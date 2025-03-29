@@ -44,27 +44,25 @@ getData()
 		key id = llList2Key(avatarsInRegion, index + 1);
 
 		string cache = llLinksetDataRead("avlang:" + (string)id);
-		if (cache != "")
+		if (cache != "" && llJsonValueType(cache, []) != JSON_INVALID)
 		{
-			list item = llJson2List(cache);
-			avName = llList2String(item, 0);
-			avLang = llList2String(item, 1);
+			avName = llJsonGetValue(cache, [0]);
+			avLang = llJsonGetValue(cache, [1]);
 		}
 		else
 		{
 			avName = llKey2Name(id);
 			avName = llGetSubString(avName, 0, (llSubStringIndex(avName, " ") - 1));
-			avLang = llGetAgentLanguage(id);
+			avLang = llStringTrim(llGetAgentLanguage(id), STRING_TRIM);
+			if (avLang == "en-us" || avLang == "en-gb")
+			{
+				avLang = "en";
+			}
+			else if (avLang == "")
+			{
+				avLang = "xx";
+			}
 			llLinksetDataWrite("avlang:" + (string)id, llList2Json(JSON_ARRAY, [avName, avLang]));
-		}
-
-		if (avLang == "en-us" || avLang == "en-gb" || avLang == "en")
-		{
-			avLang = "en";
-		}
-		else if (avLang == "")
-		{
-			avLang = "xx";
 		}
 
 		setTextValue = setTextValue + avName + " (" + avLang + ", " + (string)avDist + "m)\n";
@@ -98,6 +96,7 @@ default
 
 	state_entry()
 	{
+		llLinksetDataDeleteFound("^avlang:", "");
 		getData();
 		llSetTimerEvent(10);
 	}
