@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.13
+// Version 2.14
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -209,19 +209,16 @@ setChatLock(integer enable)
 
 addToHistory(string role, string message)
 {
-	if (gCurrentModelName == "GPT-4" || gCurrentModelName == "3.5 Turbo")
+	if (!gHistoryEnabled)
 	{
-		if (!gHistoryEnabled)
-		{
-			gHistoryRecords = [];
-		}
-		gHistoryRecords = gHistoryRecords + llList2Json(JSON_OBJECT, ["role", role, "content", llGetSubString((string)llParseString2List(message, ["\\n"], []), 0, 1024)]);
-		message = "";
-		integer historyLength = llGetListLength(gHistoryRecords);
-		if (historyLength > 10)
-		{
-			gHistoryRecords = llList2List(gHistoryRecords, historyLength - 10, historyLength);
-		}
+		gHistoryRecords = [];
+	}
+	gHistoryRecords = gHistoryRecords + llList2Json(JSON_OBJECT, ["role", role, "content", llGetSubString((string)llParseString2List(message, ["\\n"], []), 0, 1024)]);
+	message = "";
+	integer historyLength = llGetListLength(gHistoryRecords);
+	if (historyLength > 10)
+	{
+		gHistoryRecords = llList2List(gHistoryRecords, historyLength - 10, historyLength);
 	}
 }
 
@@ -353,12 +350,12 @@ default
 			else if (message == "Simple mode")
 			{
 				gSimpleAnswers = !gSimpleAnswers;
-				refreshState(id, "Simple answers mode " + llList2String(["DISABLED.", "ENABLED. Please note that this functionality is only available with chat and completions models."], gSimpleAnswers));
+				refreshState(id, "Simple answers mode " + llList2String(["DISABLED.", "ENABLED."], gSimpleAnswers));
 			}
 			else if (message == "History")
 			{
 				gHistoryEnabled = !gHistoryEnabled;
-				refreshState(id, "History is now " + llList2String(["DISABLED.", "ENABLED. Please note that this functionality is only available with chat models (3.5 Turbo and GPT-4)."], gHistoryEnabled));
+				refreshState(id, "History is now " + llList2String(["DISABLED.", "ENABLED."], gHistoryEnabled));
 			}
 			else if (message == "Prefix mode")
 			{
@@ -381,7 +378,7 @@ default
 			}
 			else if (message == "Select model")
 			{
-				startDialog(id, "Select the OpenAI model.\n \n'3.5 Turbo' and 'GPT-4' are chat models with optional history support.\n \nCurrent one: " + gCurrentModelName, gModelsList);
+				startDialog(id, "Select the OpenAI model.\n \nCurrent one: " + gCurrentModelName, gModelsList);
 			}
 			else if (message == "Listen to")
 			{
@@ -462,17 +459,12 @@ default
 		}
 
 		gAnswerToAvatar = id;
-		list promptAdditions;
-
-		if (gCurrentModelName == "GPT-4" || gCurrentModelName == "3.5 Turbo")
-		{
-			addToHistory("user", message);
-			list timeList = llParseString2List(llGetTimestamp(), ["T","."], []);
-			promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". User's name: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Do not EVER mention that you're ChatGPT or a language model, NEVER leave the role. Your answer MUST be max 970 characters."]), ",") + "]"];
-			timeList = [];
-		}
-
+		addToHistory("user", message);
+		list timeList = llParseString2List(llGetTimestamp(), ["T","."], []);
+		list promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". User's name: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Do not EVER mention that you're ChatGPT or a language model, NEVER leave the role. Your answer MUST be max 970 characters."]), ",") + "]"];
+		timeList = [];
 		message = "";
+
 		gHTTPRequestId = llHTTPRequest("https://api.openai.com" + gCurrentEndpoint, [
 			HTTP_MIMETYPE, "application/json",
 			HTTP_METHOD, "POST",
@@ -489,7 +481,6 @@ default
 		if (gHTTPRequestId == request_id)
 		{
 
-			// GPT-4, GPT 3.5 Turbo
 			string result = llJsonGetValue(body, ["choices", 0, "message", "content"]);
 
 			if (result == JSON_INVALID || result == JSON_NULL || llStringTrim(result, STRING_TRIM) == "")
