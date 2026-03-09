@@ -63,21 +63,7 @@ list gOpenAiModels = [
 	"max_tokens", 1000,
 	"top_p", 1,
 	"frequency_penalty", 0.0,
-	"presence_penalty", 0.6,
-
-	"ModelName", "DALL-E 2",
-	"Endpoint", "/v1/images/generations",
-	"Items", 3,
-	"model", "dall-e-2",
-	"n", 1,
-	"size", "1024x1024",
-
-	"ModelName", "DALL-E 3",
-	"Endpoint", "/v1/images/generations",
-	"Items", 3,
-	"model", "dall-e-3",
-	"n", 1,
-	"size", "1024x1024"
+	"presence_penalty", 0.6
 
 ];
 
@@ -395,7 +381,7 @@ default
 			}
 			else if (message == "Select model")
 			{
-				startDialog(id, "Select the OpenAI model.\n \n'3.5 Turbo' and 'GPT-4' are chat models with optional history support, 'DALL-E' can generate links to images.\n \nCurrent one: " + gCurrentModelName, gModelsList);
+				startDialog(id, "Select the OpenAI model.\n \n'3.5 Turbo' and 'GPT-4' are chat models with optional history support.\n \nCurrent one: " + gCurrentModelName, gModelsList);
 			}
 			else if (message == "Listen to")
 			{
@@ -485,11 +471,6 @@ default
 			promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". User's name: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Do not EVER mention that you're ChatGPT or a language model, NEVER leave the role. Your answer MUST be max 970 characters."]), ",") + "]"];
 			timeList = [];
 		}
-		else if (gCurrentModelName == "DALL-E 2" || gCurrentModelName == "DALL-E 3")
-		{
-			promptAdditions = ["user", (string)id, "prompt", llGetSubString(message, 0, 1024)];
-			answerUser("Query received, please be patient...");
-		}
 
 		message = "";
 		gHTTPRequestId = llHTTPRequest("https://api.openai.com" + gCurrentEndpoint, [
@@ -510,12 +491,6 @@ default
 
 			// GPT-4, GPT 3.5 Turbo
 			string result = llJsonGetValue(body, ["choices", 0, "message", "content"]);
-
-			// DALL-E
-			if (result == JSON_INVALID || result == JSON_NULL)
-			{
-				result = llJsonGetValue(body, ["data", 0, "url"]);
-			}
 
 			if (result == JSON_INVALID || result == JSON_NULL || llStringTrim(result, STRING_TRIM) == "")
 			{
