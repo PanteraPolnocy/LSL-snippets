@@ -147,8 +147,7 @@ setModel(string modelName)
 
 setPersonality(string personalityName)
 {
-	integer personalityPosition = llListFindList(gPersonalities, (list)personalityName);
-	gCurrentPersonality = llList2String(gPersonalities, personalityPosition + 1);
+	gCurrentPersonality = llLinksetDataRead("gptperson:" + personalityName);
 	gCurrentPersonalityName = personalityName;
 	llOwnerSay("Current personality: " + personalityName);
 }
@@ -254,14 +253,19 @@ default
 			++i;
 		}
 
+		llLinksetDataDelete("gptperson:");
 		gPersonalitiesList = llList2ListStrided(gPersonalities, 0, -1, 3);
 		listLength = llGetListLength(gPersonalities);
 		i = 0;
 		while (i < listLength)
 		{
-			gPersonalityLabels = gPersonalityLabels + llList2String(gPersonalities, i) + ": " + llList2String(gPersonalities, i + 2) + "\n";
+			string personalityName = llList2String(gPersonalities, i);
+			llLinksetDataWrite("gptperson:" + personalityName, llList2String(gPersonalities, i + 1));
+			gPersonalityLabels = gPersonalityLabels + personalityName + ": " + llList2String(gPersonalities, i + 2) + "\n";
 			i = i + 3;
 		}
+
+		gPersonalities = [];
 
 		integer memoryLimit = llGetMemoryLimit();
 		if (memoryLimit <= 16384)
@@ -496,14 +500,6 @@ default
 
 			setChatLock(FALSE);
 
-		}
-	}
-
-	linkset_data(integer action, string name, string value)
-	{
-		if (action == LINKSETDATA_RESET || action == LINKSETDATA_DELETE || action == LINKSETDATA_UPDATE)
-		{
-			llOwnerSay("Blacklist storage modified.");
 		}
 	}
 
