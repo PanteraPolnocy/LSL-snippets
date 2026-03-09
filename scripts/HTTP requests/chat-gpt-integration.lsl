@@ -494,7 +494,7 @@ default
 			body = "";
 			result = llStringTrim(result, STRING_TRIM);
 			addToHistory("assistant", result);
-			result = "([https://platform.openai.com/docs/usage-policies AI]) " + result;
+			result = "([https://openai.com/policies/usage-policies AI]) " + result;
 
 			// Result Multi-Say Parsing by Duckie Dickins
 			integer chunkSize = 1024;
