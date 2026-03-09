@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.14
+// Version 2.15
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -25,37 +25,17 @@ integer gPrefixMode = FALSE;
 // Models database; First one is default
 list gOpenAiModels = [
 
-	"ModelName", "3.5 Turbo",
+	"ModelName", "GPT-4o Mini",
 	"Endpoint", "/v1/chat/completions",
 	"Items", 6,
-	"model", "gpt-3.5-turbo",
+	"model", "gpt-4o-mini",
 	"temperature", 0.9,
 	"max_tokens", 1000,
 	"top_p", 1,
 	"frequency_penalty", 0.0,
 	"presence_penalty", 0.6,
 
-	"ModelName", "GPT-4 Turbo",
-	"Endpoint", "/v1/chat/completions",
-	"Items", 6,
-	"model", "gpt-4-turbo",
-	"temperature", 0.9,
-	"max_tokens", 1000,
-	"top_p", 1,
-	"frequency_penalty", 0.0,
-	"presence_penalty", 0.6,
-
-	"ModelName", "GPT-4",
-	"Endpoint", "/v1/chat/completions",
-	"Items", 6,
-	"model", "gpt-4",
-	"temperature", 0.9,
-	"max_tokens", 1000,
-	"top_p", 1,
-	"frequency_penalty", 0.0,
-	"presence_penalty", 0.6,
-
-	"ModelName", "GPT-4 Omni",
+	"ModelName", "GPT-4o",
 	"Endpoint", "/v1/chat/completions",
 	"Items", 6,
 	"model", "gpt-4o",
