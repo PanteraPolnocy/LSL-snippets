@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.15
+// Version 2.16
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -101,68 +101,62 @@ list gPersonalities = [
 ];
 
 // Set in runtime
-integer gScriptReady;
-integer gListenHandle;
-integer gDialogChannel;
-integer gDialogHandle;
-integer gManagingBlocks;
-integer gChatIsLocked;
-integer gPrefixLength;
-string gPersonalityLabels;
-string gCurrentPersonality;
-string gCurrentPersonalityName;
-string gCurrentEndpoint;
-string gCurrentModelName;
 list gCurrentModelData;
 list gModelsList;
 list gPersonalitiesList;
 list gHistoryRecords;
-key gAnswerToAvatar;
-key gHTTPRequestId;
-key gOwnerKey;
 
 // Functions
 
 setListener()
 {
-	key listenKey = NULL_KEY;
-	if (gListenMode == "Owner")
+	string currentChatHandle = llLinksetDataRead("gptvar:chat_handle");
+	if (currentChatHandle != "")
 	{
-		listenKey = gOwnerKey;
+		llListenRemove((integer)currentChatHandle);
 	}
-	gListenHandle = llListen(PUBLIC_CHANNEL, "", listenKey, "");
-	llListenControl(gListenHandle, gEnabled);
-	llSetText(gCurrentPersonalityName + " (" + gCurrentModelName + ")" + llList2String(["", "\nHistory enabled"], gHistoryEnabled) + llList2String(["", "\nPrefix mode"], gPrefixMode) + llList2String(["", "\nSimple answers"], gSimpleAnswers) + "\n" + llList2String(["DISABLED", "ENABLED"], gEnabled), <1, 1, 1>, gHovertext * 0.6);
+	if (gEnabled)
+	{
+		key listenKey = NULL_KEY;
+		if (gListenMode == "Owner")
+		{
+			listenKey = llGetOwner();
+		}
+		llLinksetDataWrite("gptvar:chat_handle", (string)llListen(PUBLIC_CHANNEL, "", listenKey, ""));
+	}
+	llSetText(llLinksetDataRead("gptvar:current_personality_name") + " (" + llLinksetDataRead("gptvar:current_model_name") + ")" + llList2String(["", "\nHistory enabled"], gHistoryEnabled) + llList2String(["", "\nPrefix mode"], gPrefixMode) + llList2String(["", "\nSimple answers"], gSimpleAnswers) + "\n" + llList2String(["DISABLED", "ENABLED"], gEnabled), <1, 1, 1>, gHovertext * 0.6);
 }
 
 setModel(string modelName)
 {
-	integer modelPosition = llListFindList(gOpenAiModels, (list)modelName);
-	gCurrentEndpoint = llList2String(gOpenAiModels, modelPosition + 2);
-	gCurrentModelData = llList2List(gOpenAiModels, modelPosition + 5, modelPosition + 4 + llList2Integer(gOpenAiModels, modelPosition + 4) * 2);
-	gCurrentModelName = modelName;
-	gPrefixLength = llStringLength(modelName) + 1;
+	list openAiModels = llJson2List(llLinksetDataRead("gptvar:openai_models"));
+	integer modelPosition = llListFindList(openAiModels, (list)modelName);
+	gCurrentModelData = llList2List(openAiModels, modelPosition + 5, modelPosition + 4 + llList2Integer(openAiModels, modelPosition + 4) * 2);
+	llLinksetDataWrite("gptvar:current_endpoint", llList2String(openAiModels, modelPosition + 2));
+	llLinksetDataWrite("gptvar:current_model_name", modelName);
+	llLinksetDataWrite("gptvar:prefix_length", (string)(llStringLength(modelName) + 1));
 	llOwnerSay("Model selected: " + modelName);
 }
 
 setPersonality(string personalityName)
 {
-	gCurrentPersonality = llLinksetDataRead("gptperson:" + personalityName);
-	gCurrentPersonalityName = personalityName;
+	llLinksetDataWrite("gptvar:current_personality", llLinksetDataRead("gptperson:" + personalityName));
+	llLinksetDataWrite("gptvar:current_personality_name", personalityName);
 	llOwnerSay("Current personality: " + personalityName);
 }
 
 startDialog(key id, string text, list buttons)
 {
-	gDialogHandle = llListen(gDialogChannel, "", id, "");
-	llDialog(id, "\n" + text, buttons, gDialogChannel);
+	integer dialogChannel = (integer)llLinksetDataRead("gptvar:dialog_channel");
+	llLinksetDataWrite("gptvar:dialog_handle", (string)llListen(dialogChannel, "", id, ""));
+	llDialog(id, "\n" + text, buttons, dialogChannel);
 	llSetTimerEvent(90);
 }
 
 stopDialog()
 {
 	llSetTimerEvent(0);
-	llListenRemove(gDialogHandle);
+	llListenRemove((integer)llLinksetDataRead("gptvar:dialog_handle"));
 }
 
 refreshState(key id, string message)
@@ -174,7 +168,7 @@ refreshState(key id, string message)
 
 setChatLock(integer enable)
 {
-	gChatIsLocked = enable;
+	llLinksetDataWrite("gptvar:chat_is_locked", (string)enable);
 	if (enable)
 	{
 		// Chat lock timeout (10 seconds)
@@ -203,11 +197,11 @@ addToHistory(string role, string message)
 
 openMainMenu(key person)
 {
-	gManagingBlocks = 0;
+	llLinksetDataWrite("gptvar:managing_blocks", "0");
 	startDialog(person,
 		"Current state: " + llList2String(["DISABLED", "ENABLED"], gEnabled) +
-		"\nCurrent personality: " + gCurrentPersonalityName +
-		"\nCurrent model: " + gCurrentModelName +
+		"\nCurrent personality: " + llLinksetDataRead("gptvar:current_personality_name") +
+		"\nCurrent model: " + llLinksetDataRead("gptvar:current_model_name") +
 		"\nSimple answers: " + llList2String(["DISABLED", "ENABLED"], gSimpleAnswers) +
 		"\nPrefix mode: " + llList2String(["DISABLED", "ENABLED"], gPrefixMode) +
 		"\nHistory: " + llList2String(["DISABLED", "ENABLED"], gHistoryEnabled) +
@@ -225,7 +219,7 @@ answerUser(string theMessage)
 	}
 	else
 	{
-		llRegionSayTo(gAnswerToAvatar, 0, theMessage);
+		llRegionSayTo((key)llLinksetDataRead("gptvar:answer_to_avatar"), 0, theMessage);
 	}
 }
 
@@ -238,11 +232,26 @@ default
 	{
 
 		llOwnerSay("Starting up...");
-		gOwnerKey = llGetOwner();
-		gDialogChannel = (integer)(llFrand(-10000000)-10000000);
+		llLinksetDataDeleteFound("^gptvar:", "");
+		llLinksetDataDeleteFound("^gptperson:", "");
 
-		integer listLength = llGetListLength(gOpenAiModels);
+		gPersonalitiesList = llList2ListStrided(gPersonalities, 0, -1, 3);
+		integer listLength = llGetListLength(gPersonalities);
 		integer i;
+		string personalityLabels;
+		while (i < listLength)
+		{
+			string personalityName = llList2String(gPersonalities, i);
+			llLinksetDataWrite("gptperson:" + personalityName, llList2String(gPersonalities, i + 1));
+			personalityLabels = personalityLabels + personalityName + ": " + llList2String(gPersonalities, i + 2) + "\n";
+			i = i + 3;
+		}
+		llLinksetDataWrite("gptvar:personality_labels", personalityLabels);
+		personalityLabels = "";
+		gPersonalities = [];
+
+		listLength = llGetListLength(gOpenAiModels);
+		i = 0;
 		while (i < listLength)
 		{
 			string currentItem = llList2String(gOpenAiModels, i);
@@ -252,43 +261,29 @@ default
 			}
 			++i;
 		}
-
-		llLinksetDataDelete("gptperson:");
-		gPersonalitiesList = llList2ListStrided(gPersonalities, 0, -1, 3);
-		listLength = llGetListLength(gPersonalities);
-		i = 0;
-		while (i < listLength)
-		{
-			string personalityName = llList2String(gPersonalities, i);
-			llLinksetDataWrite("gptperson:" + personalityName, llList2String(gPersonalities, i + 1));
-			gPersonalityLabels = gPersonalityLabels + personalityName + ": " + llList2String(gPersonalities, i + 2) + "\n";
-			i = i + 3;
-		}
-
-		gPersonalities = [];
+		llLinksetDataWrite("gptvar:openai_models", llList2Json(JSON_ARRAY, gOpenAiModels));
+		gOpenAiModels = [];
 
 		integer memoryLimit = llGetMemoryLimit();
 		if (memoryLimit <= 16384)
 		{
-			llOwnerSay("FATAL ERROR: You are currently using the LSO VM. Please compile the script using Mono.");
+			llOwnerSay("ERROR: You are currently using the LSO VM. Please compile the script using Mono, otherwise it will be crashing!");
 		}
-		else
-		{
-			setPersonality(llList2String(gPersonalitiesList, 0));
-			setModel(llList2String(gModelsList, 0));
-			stopDialog();
-			setListener();
-			setChatLock(FALSE);
-			llOwnerSay("Ready. Touch me to adjust options or enable/disable. Memory usage: " + (string)(llGetUsedMemory() / 1024) + " KB out of " + (string)(memoryLimit / 1024) + " KB available.");
-			gScriptReady = TRUE;
-		}
+
+		llLinksetDataWrite("gptvar:dialog_channel", (string)((integer)(llFrand(-10000000)-10000000)));
+		setPersonality(llList2String(gPersonalitiesList, 0));
+		setModel(llList2String(gModelsList, 0));
+		stopDialog();
+		setListener();
+		setChatLock(FALSE);
+		llOwnerSay("Ready. Touch me to adjust options or enable/disable. Memory usage: " + (string)(llGetUsedMemory() / 1024) + " KB out of " + (string)(memoryLimit / 1024) + " KB available.");
 
 	}
 
 	touch_start(integer nd)
 	{
 		key toucherKey = llDetectedKey(0);
-		if (toucherKey == gOwnerKey && gScriptReady)
+		if (toucherKey == llGetOwner())
 		{
 			openMainMenu(toucherKey);
 		}
@@ -297,14 +292,15 @@ default
 	listen(integer channel, string name, key id, string message)
 	{
 
-		if (channel == gDialogChannel)
+		if (channel == (integer)llLinksetDataRead("gptvar:dialog_channel"))
 		{
-			if (gManagingBlocks)
+			string managingBlocks = llLinksetDataRead("gptvar:managing_blocks");
+			if (managingBlocks != "0")
 			{
 				message = llStringTrim(message, STRING_TRIM);
 				if ((key)message)
 				{
-					if (gManagingBlocks == 1)
+					if (managingBlocks == "1")
 					{
 						llOwnerSay("Addition request has been sent to the blacklist storage");
 						llLinksetDataWrite("gptblock:" + message, "1");
@@ -344,7 +340,7 @@ default
 			else if (message == "Prefix mode")
 			{
 				gPrefixMode = !gPrefixMode;
-				refreshState(id, "Prefix mode is now " + llList2String(["DISABLED.", "ENABLED. Every message needs to be preceded with '" + gCurrentPersonalityName + ",' in order to get a response."], gPrefixMode));
+				refreshState(id, "Prefix mode is now " + llList2String(["DISABLED.", "ENABLED. Every message needs to be preceded with '" + llLinksetDataRead("gptvar:current_personality_name") + ",' in order to get a response."], gPrefixMode));
 			}
 			else if (message == "Owner" || message == "Same group" || message == "Everyone")
 			{
@@ -358,11 +354,11 @@ default
 			}
 			else if (message == "Personality")
 			{
-				startDialog(id, gPersonalityLabels + " \nCurrent one: " + gCurrentPersonalityName, gPersonalitiesList);
+				startDialog(id, llLinksetDataRead("gptvar:personality_labels") + " \nCurrent one: " + llLinksetDataRead("gptvar:current_personality_name"), gPersonalitiesList);
 			}
 			else if (message == "Select model")
 			{
-				startDialog(id, "Select the OpenAI model.\n \nCurrent one: " + gCurrentModelName, gModelsList);
+				startDialog(id, "Select the OpenAI model.\n \nCurrent one: " + llLinksetDataRead("gptvar:current_model_name"), gModelsList);
 			}
 			else if (message == "Listen to")
 			{
@@ -394,19 +390,23 @@ default
 			else if (message == "Add block" || message == "Remove block")
 			{
 				string label = "add to";
-				gManagingBlocks = 1;
-				if (message == "Remove block")
+				if (message == "Add block")
 				{
-					gManagingBlocks = 2;
+					llLinksetDataWrite("gptvar:managing_blocks", "1");
+				}
+				else
+				{
+					llLinksetDataWrite("gptvar:managing_blocks", "2");
 					label = "remove from";
 				}
-				gDialogHandle = llListen(gDialogChannel, "", id, "");
-				llTextBox(id, "\nPlease specify one single avatar UUID you'd like to " + label + " the blacklist storage.", gDialogChannel);
+				integer dialogChannel = (integer)llLinksetDataRead("gptvar:dialog_channel");
+				llLinksetDataWrite("gptvar:dialog_handle", (string)llListen(dialogChannel, "", id, ""));
+				llTextBox(id, "\nPlease specify one single avatar UUID you'd like to " + label + " the blacklist storage.", dialogChannel);
 				llSetTimerEvent(60);
 			}
 			else if (~llListFindList(gPersonalitiesList, (list)message))
 			{
-				if (gCurrentPersonalityName != message)
+				if (llLinksetDataRead("gptvar:current_personality_name") != message)
 				{
 					gHistoryRecords = [];
 				}
@@ -424,7 +424,7 @@ default
 		}
 
 		// Remove 'llGetAgentSize(id) == ZERO_VECTOR' and set listen mode to 'everyone' or 'same group' if you want script reacting to objects
-		if (gChatIsLocked || (gListenMode == "Owner" && id != gOwnerKey) || llGetAgentSize(id) == ZERO_VECTOR || llVecDist(llGetPos(), llList2Vector(llGetObjectDetails(id, [OBJECT_POS]), 0)) > 20 || (gListenMode == "Same group" && !llSameGroup(id)) || llGetListLength(llLinksetDataFindKeys("gptblock:" + (string)id, 0, 1)) > 0)
+		if ((integer)llLinksetDataRead("gptvar:chat_is_locked") || (gListenMode == "Owner" && id != llGetOwner()) || llGetAgentSize(id) == ZERO_VECTOR || llVecDist(llGetPos(), llList2Vector(llGetObjectDetails(id, [OBJECT_POS]), 0)) > 20 || (gListenMode == "Same group" && !llSameGroup(id)) || llGetListLength(llLinksetDataFindKeys("gptblock:" + (string)id, 0, 1)) > 0)
 		{
 			return;
 		}
@@ -434,35 +434,35 @@ default
 
 		if (gPrefixMode)
 		{
-			if (llSubStringIndex(llToLower(message), llToLower(gCurrentPersonalityName) + ",") != 0)
+			if (llSubStringIndex(llToLower(message), llToLower(llLinksetDataRead("gptvar:current_personality_name")) + ",") != 0)
 			{
 				setChatLock(FALSE);
 				return;
 			}
-			message = llStringTrim(llGetSubString(message, gPrefixLength, llStringLength(message) - 1), STRING_TRIM_HEAD);
+			message = llStringTrim(llGetSubString(message, (integer)llLinksetDataRead("gptvar:prefix_length"), llStringLength(message) - 1), STRING_TRIM_HEAD);
 		}
 
-		gAnswerToAvatar = id;
+		llLinksetDataWrite("gptvar:answer_to_avatar", (string)id);
 		addToHistory("user", message);
 		list timeList = llParseString2List(llGetTimestamp(), ["T","."], []);
-		list promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". User's name: \"" + llGetUsername(id) + "\". Act and address yourself as " + gCurrentPersonality +". Do not EVER mention that you're ChatGPT or a language model, NEVER leave the role. Your answer MUST be max 970 characters."]), ",") + "]"];
+		list promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". User's name: \"" + llGetUsername(id) + "\". Act and address yourself as " + llLinksetDataRead("gptvar:current_personality") + ". Do not EVER mention that you're ChatGPT or a language model, NEVER leave the role. Your answer MUST be max 970 characters."]), ",") + "]"];
 		timeList = [];
 		message = "";
 
-		gHTTPRequestId = llHTTPRequest("https://api.openai.com" + gCurrentEndpoint, [
+		llLinksetDataWrite("gptvar:http_request_id", (string)llHTTPRequest("https://api.openai.com" + llLinksetDataRead("gptvar:current_endpoint"), [
 			HTTP_MIMETYPE, "application/json",
 			HTTP_METHOD, "POST",
 			HTTP_BODY_MAXLENGTH, 16384,
 			HTTP_ACCEPT, "application/json",
 			HTTP_CUSTOM_HEADER, "Authorization", "Bearer " + gChatGptApiKey
-		], llList2Json(JSON_OBJECT, llListInsertList(gCurrentModelData, promptAdditions, 0)));
+		], llList2Json(JSON_OBJECT, llListInsertList(gCurrentModelData, promptAdditions, 0))));
 
 	}
 
 	http_response(key request_id, integer status, list metadata, string body)
 	{
 		metadata = [];
-		if (gHTTPRequestId == request_id)
+		if (request_id == (key)llLinksetDataRead("gptvar:http_request_id"))
 		{
 
 			string result = llJsonGetValue(body, ["choices", 0, "message", "content"]);
