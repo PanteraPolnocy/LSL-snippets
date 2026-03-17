@@ -1,5 +1,5 @@
 // Flashlight and light generator device, compatible with Nanite Systems' Light Bus protocol
-// Tested with ARES 0.5.5 (beta 3) / NS-112 AIDE (September 2025)
+// Tested with ARES 0.5.6.2 / NS-112 AIDE (March 2026)
 // Written by PanteraPolnocy
 
 // This project is an independent creation and is not officially affiliated with Nanite Systems.
