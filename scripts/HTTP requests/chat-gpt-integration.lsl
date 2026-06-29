@@ -1,6 +1,6 @@
 // OpenAI's ChatGPT integration for LSL
 // Written by PanteraPolnocy, March 2023
-// Version 2.16
+// Version 2.18
 
 // You're responsible for how your OpenAI account will be used!
 // Set script to "everyone" or "same group" on your own risk. Mandatory reading:
@@ -107,6 +107,25 @@ list gPersonalitiesList;
 list gHistoryRecords;
 
 // Functions
+
+string ReplaceAll(string s, string find, string repl)
+{
+	return llDumpList2String(llParseStringKeepNulls(s, [find], []), repl);
+}
+
+string FixMojibake(string s)
+{
+	s = ReplaceAll(s, "â", "'");
+	s = ReplaceAll(s, "â", "'");
+	s = ReplaceAll(s, "â", "\"");
+	s = ReplaceAll(s, "â", "\"");
+	s = ReplaceAll(s, "â", "-");
+	s = ReplaceAll(s, "â", "-");
+	s = ReplaceAll(s, "â¦", "...");
+	s = ReplaceAll(s, "Â ", " ");
+	s = ReplaceAll(s, "Â", "");
+	return s;
+}
 
 setListener()
 {
@@ -445,7 +464,14 @@ default
 		llLinksetDataWrite("gptvar:answer_to_avatar", (string)id);
 		addToHistory("user", message);
 		list timeList = llParseString2List(llGetTimestamp(), ["T","."], []);
-		list promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, ["role", "system", "content", llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) + "Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) + ". User's name: \"" + llGetUsername(id) + "\". Act and address yourself as " + llLinksetDataRead("gptvar:current_personality") + ". Do not EVER mention that you're ChatGPT or a language model, NEVER leave the role. Your answer MUST be max 970 characters."]), ",") + "]"];
+		list promptAdditions = ["user", (string)id, "messages", "[" + llDumpList2String(gHistoryRecords + llList2Json(JSON_OBJECT, [
+			"role", "system", "content",
+			llList2String(["", "Answer in a way a 5-year-old would understand. "], gSimpleAnswers) +
+			"Coordinated Universal Time now: " + llList2String(timeList, 0) + ", " + llList2String(timeList, 1) +
+			". User's name: \"" + llGetUsername(id) + "\"" +
+			". Act and address yourself as " + llLinksetDataRead("gptvar:current_personality") +
+			". Do not EVER mention that you're ChatGPT or a language model, NEVER leave the role. Your answer MUST be max 970 characters. Use only plain, standard, ASCII characters. Never use curly apostrophes, curly quotation marks, smart quotes, em dashes, en dashes, ellipses, bullet symbols, accented letters, emoji, or any other Unicode characters. Use straight apostrophes and straight quotation marks. Use hyphens instead of dashes. Use three periods instead of an ellipsis."
+		]), ",") + "]"];
 		timeList = [];
 		message = "";
 
@@ -476,7 +502,7 @@ default
 			}
 
 			body = "";
-			result = llStringTrim(result, STRING_TRIM);
+			result = llStringTrim(FixMojibake(result), STRING_TRIM);
 			addToHistory("assistant", result);
 			result = "([https://openai.com/policies/usage-policies AI]) " + result;
 
