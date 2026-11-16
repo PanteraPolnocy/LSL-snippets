@@ -153,7 +153,6 @@ setModel(string modelName)
 	gCurrentModelData = llList2List(openAiModels, modelPosition + 5, modelPosition + 4 + llList2Integer(openAiModels, modelPosition + 4) * 2);
 	llLinksetDataWrite("gptvar:current_endpoint", llList2String(openAiModels, modelPosition + 2));
 	llLinksetDataWrite("gptvar:current_model_name", modelName);
-	llLinksetDataWrite("gptvar:prefix_length", (string)(llStringLength(modelName) + 1));
 	llOwnerSay("Model selected: " + modelName);
 }
 
@@ -161,6 +160,7 @@ setPersonality(string personalityName)
 {
 	llLinksetDataWrite("gptvar:current_personality", llLinksetDataRead("gptperson:" + personalityName));
 	llLinksetDataWrite("gptvar:current_personality_name", personalityName);
+	llLinksetDataWrite("gptvar:prefix_length", (string)(llStringLength(personalityName) + 1));
 	llOwnerSay("Current personality: " + personalityName);
 }
 
